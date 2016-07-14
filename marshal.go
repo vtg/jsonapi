@@ -19,12 +19,12 @@ func Marshal(i interface{}) ([]byte, error) {
 		return []byte{}, errMarshalInvalidData
 	}
 
-	c := encoder{buf: new(bytes.Buffer)}
+	c := &encoder{}
 	if err := c.marshal(v); err != nil {
 		return []byte{}, err
 	}
 
-	return c.buf.Bytes(), nil
+	return c.Bytes(), nil
 }
 
 // MarshalSlice marshalling items to json api format
@@ -43,23 +43,23 @@ func MarshalSlice(i interface{}) ([]byte, error) {
 		return []byte{}, errMarshalInvalidData
 	}
 
-	c := encoder{buf: new(bytes.Buffer)}
-	c.buf.WriteByte('[')
+	c := &encoder{}
+	c.WriteByte('[')
 	iLen := e.Len()
 	for i := 0; i < iLen; i++ {
 		if err := c.marshal(valuePtr(e.Index(i))); err != nil {
 			return []byte{}, err
 		}
 		if i < iLen-1 {
-			c.buf.WriteByte(',')
+			c.WriteByte(',')
 		}
 	}
-	c.buf.WriteByte(']')
-	return c.buf.Bytes(), nil
+	c.WriteByte(']')
+	return c.Bytes(), nil
 }
 
 type encoder struct {
-	buf *bytes.Buffer
+	bytes.Buffer
 }
 
 func (e *encoder) marshal(el reflect.Value) error {
@@ -76,7 +76,7 @@ func (e *encoder) marshal(el reflect.Value) error {
 		if err != nil {
 			return err
 		}
-		e.buf.Write(b)
+		e.Write(b)
 		return nil
 	}
 
@@ -91,43 +91,43 @@ func (e *encoder) marshal(el reflect.Value) error {
 
 	f := types.get(t)
 	if !f.api() {
-		return json.NewEncoder(e.buf).Encode(el.Interface())
+		return json.NewEncoder(e).Encode(el.Interface())
 	}
 
-	e.buf.WriteByte('{')
-	e.buf.WriteString(`"id":"`)
+	e.WriteByte('{')
+	e.WriteString(`"id":"`)
 
 	id := el.FieldByIndex(f.id)
 	switch id.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		e.buf.WriteString(strconv.FormatUint(id.Uint(), 10))
+		e.WriteString(strconv.FormatUint(id.Uint(), 10))
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-		e.buf.WriteString(strconv.FormatInt(id.Int(), 10))
+		e.WriteString(strconv.FormatInt(id.Int(), 10))
 	case reflect.String:
-		e.buf.WriteString(id.String())
+		e.WriteString(id.String())
 	}
-	e.buf.WriteString(`","type":"`)
-	e.buf.WriteString(f.stype)
+	e.WriteString(`","type":"`)
+	e.WriteString(f.stype)
 	aLen := len(f.attrs)
 	if aLen > 0 {
-		e.buf.WriteString(`","attributes":{`)
+		e.WriteString(`","attributes":{`)
 		for k := range f.attrs {
-			e.buf.WriteByte('"')
-			e.buf.WriteString(f.attrs[k].name)
-			e.buf.WriteByte('"')
-			e.buf.WriteByte(':')
+			e.WriteByte('"')
+			e.WriteString(f.attrs[k].name)
+			e.WriteByte('"')
+			e.WriteByte(':')
 			b, err := json.Marshal(el.FieldByIndex(f.attrs[k].idx).Interface())
 			if err != nil {
 				return err
 			}
-			e.buf.Write(b)
+			e.Write(b)
 			if k < aLen-1 {
-				e.buf.WriteByte(',')
+				e.WriteByte(',')
 			}
 		}
-		e.buf.WriteByte('}')
+		e.WriteByte('}')
 	}
-	e.buf.WriteByte('}')
+	e.WriteByte('}')
 
 	return nil
 }
