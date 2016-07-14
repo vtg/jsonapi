@@ -32,12 +32,8 @@ func TestMarshal(t *testing.T) {
 	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"}}}`
 
 	res, err := Marshal(&s)
-	if err != nil {
-		t.Errorf("unexpected error: %s\n", err.Error())
-	}
-	if string(res) != want {
-		t.Errorf("expected: %s\n got: %s\n", want, string(res))
-	}
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
 }
 
 func TestMarshalNonAPI(t *testing.T) {
@@ -48,15 +44,11 @@ func TestMarshalNonAPI(t *testing.T) {
 		Excluded: "include this",
 	}
 
-	want := `{"ID":100,"Name":"John","Address":{"country":"CTR","city":"DT"},"Excluded":"include this"}`
+	want := `{"ID":100,"Name":"John","Address":{"country":"CTR","city":"DT"},"Excluded":"include this"}` + "\n"
 
 	res, err := Marshal(&s)
-	if err != nil {
-		t.Errorf("unexpected error: %s\n", err.Error())
-	}
-	if string(res) != want {
-		t.Errorf("expected: %s\n got: %s\n", want, string(res))
-	}
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
 }
 
 func TestMarshalError(t *testing.T) {
@@ -65,9 +57,7 @@ func TestMarshalError(t *testing.T) {
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		if err.Error() != want {
-			t.Errorf("incorrect error received:\nexpected: %s\n got: %s\n", want, err.Error())
-		}
+		assertEqual(t, want, err.Error())
 	}
 }
 
@@ -92,12 +82,8 @@ func TestMarshalSlice(t *testing.T) {
 	want = "[" + want + "," + want1 + "]"
 
 	res, err := MarshalSlice(r)
-	if err != nil {
-		t.Errorf("unexpected error: %s\n", err.Error())
-	}
-	if string(res) != want {
-		t.Errorf("expected: %s\n got: %s\n", want, string(res))
-	}
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
 }
 
 func TestMarshalSliceError(t *testing.T) {
@@ -106,25 +92,19 @@ func TestMarshalSliceError(t *testing.T) {
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		if err.Error() != want {
-			t.Errorf("incorrect error received:\nexpected: %s\n got: %s\n", want, err.Error())
-		}
+		assertEqual(t, want, err.Error())
 	}
 	_, err = MarshalSlice("asd")
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		if err.Error() != want {
-			t.Errorf("incorrect error received:\nexpected: %s\n got: %s\n", want, err.Error())
-		}
+		assertEqual(t, want, err.Error())
 	}
 	_, err = MarshalSlice([]string{"asd"})
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		if err.Error() != "jsonapi: only struct allowed for parsing" {
-			t.Errorf("incorrect error received:\nexpected: %s\n got: %s\n", want, err.Error())
-		}
+		assertEqual(t, "jsonapi: only struct allowed for parsing", err.Error())
 	}
 }
 
