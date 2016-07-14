@@ -34,8 +34,9 @@ func (f fields) api() bool {
 }
 
 type field struct {
-	idx  []int
-	name string
+	idx      []int
+	name     string
+	readonly bool
 }
 
 type typesCache struct {
@@ -68,7 +69,7 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			continue
 		}
 
-		keys := strings.SplitN(tag, ",", 2)
+		keys := strings.SplitN(tag, ",", 3)
 		switch keys[0] {
 		case "id":
 			f.id = fd.Index
@@ -80,7 +81,11 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			if len(keys) > 1 && validKey(keys[1]) {
 				name = keys[1]
 			}
-			f.attrs = append(f.attrs, field{idx: fd.Index, name: name})
+			ro := false
+			if len(keys) > 2 {
+				ro = keys[2] == "readonly"
+			}
+			f.attrs = append(f.attrs, field{idx: fd.Index, name: name, readonly: ro})
 		}
 	}
 	s.m[t] = f
