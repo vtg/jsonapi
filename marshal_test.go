@@ -21,6 +21,39 @@ type testStructNonAPI struct {
 	Excluded string
 }
 
+type testStructMarshaler struct {
+	ID   uint64 `jsonapi:"id,test-structs"`
+	Name string `jsonapi:"attr,name"`
+}
+
+func (t *testStructMarshaler) MarshalJSONAPI() error {
+	t.Name = "changed"
+	return nil
+}
+
+func TestMarshaler(t *testing.T) {
+	s := testStructMarshaler{ID: 100}
+	want := `{"id":"100","type":"test-structs","attributes":{"name":"changed"}}`
+
+	res, err := Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
+
+func TestMarshalerSlice(t *testing.T) {
+	s := testStructMarshaler{ID: 100}
+	s1 := testStructMarshaler{ID: 101}
+
+	r := []testStructMarshaler{s, s1}
+
+	want := `{"id":"100","type":"test-structs","attributes":{"name":"changed"}}`
+	want1 := `{"id":"101","type":"test-structs","attributes":{"name":"changed"}}`
+	want = "[" + want + "," + want1 + "]"
+	res, err := MarshalSlice(&r)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
+
 func TestMarshal(t *testing.T) {
 	s := testStruct{
 		ID:       100,
@@ -52,12 +85,11 @@ func TestMarshalNonAPI(t *testing.T) {
 }
 
 func TestMarshalError(t *testing.T) {
-	want := "jsonapi: only struct allowed for parsing"
 	_, err := Marshal(nil)
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		assertEqual(t, want, err.Error())
+		assertEqual(t, errMarshalInvalidData, err)
 	}
 }
 
@@ -87,24 +119,23 @@ func TestMarshalSlice(t *testing.T) {
 }
 
 func TestMarshalSliceError(t *testing.T) {
-	want := "jsonapi: only slice allowed for parsing"
 	_, err := MarshalSlice(nil)
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		assertEqual(t, want, err.Error())
+		assertEqual(t, errMarshalInvalidData, err)
 	}
 	_, err = MarshalSlice("asd")
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		assertEqual(t, want, err.Error())
+		assertEqual(t, errMarshalInvalidData, err)
 	}
 	_, err = MarshalSlice([]string{"asd"})
 	if err == nil {
 		t.Error("no error occured with wrong value\n")
 	} else {
-		assertEqual(t, "jsonapi: only struct allowed for parsing", err.Error())
+		assertEqual(t, errMarshalInvalidData, err)
 	}
 }
 

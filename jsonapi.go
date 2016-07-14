@@ -9,6 +9,21 @@ import (
 
 var types = typesCache{m: make(map[reflect.Type]*fields)}
 
+// Marshaler interface
+type Marshaler interface {
+	MarshalJSONAPI() error
+}
+
+// Unmarshaler interface
+type Unmarshaler interface {
+	UnmarshalJSONAPI() error
+}
+
+var (
+	marshalerType   = reflect.TypeOf(new(Marshaler)).Elem()
+	unmarshalerType = reflect.TypeOf(new(Unmarshaler)).Elem()
+)
+
 // MetaData struct
 type MetaData struct {
 	Total  int `json:"total"`
@@ -116,10 +131,12 @@ func ptrValue(i interface{}) reflect.Value {
 	if !v.IsValid() {
 		return v
 	}
-	if v.Type().Kind() != reflect.Ptr {
-		if v.CanAddr() {
-			return v.Addr()
-		}
+	return valPtr(v)
+}
+
+func valPtr(v reflect.Value) reflect.Value {
+	if v.Type().Kind() != reflect.Ptr && v.CanAddr() {
+		return v.Addr()
 	}
 	return v
 }

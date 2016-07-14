@@ -2,7 +2,6 @@ package jsonapi
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -38,7 +37,7 @@ func (c Change) String() string {
 func Unmarshal(b []byte, i interface{}) error {
 	v := ptrValue(i)
 	if !v.IsValid() {
-		return errors.New("jsonapi: only struct allowed for parsing")
+		return errMarshalInvalidData
 	}
 
 	d := decoder{}
@@ -50,7 +49,7 @@ func Unmarshal(b []byte, i interface{}) error {
 func UnmarshalWithChanges(b []byte, i interface{}) (Changes, error) {
 	v := ptrValue(i)
 	if !v.IsValid() {
-		return []Change{}, errors.New("jsonapi: only struct allowed for parsing")
+		return []Change{}, errMarshalInvalidData
 	}
 
 	d := decoder{withChanges: true}
@@ -89,7 +88,7 @@ type decoder struct {
 func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 	t := e.Type()
 	if t.Kind() != reflect.Struct {
-		return errors.New("jsonapi: only struct allowed for parsing")
+		return errMarshalInvalidData
 	}
 
 	f := types.get(t)

@@ -8,17 +8,21 @@ import (
 	"strconv"
 )
 
+var (
+	errMarshalInvalidData = errors.New("jsonapi: invalid data structure passed for marshalling")
+)
+
 // Marshal item to json api format
 func Marshal(i interface{}) ([]byte, error) {
 	v := ptrValue(i)
 	if !v.IsValid() {
-		return []byte{}, errors.New("jsonapi: only struct allowed for parsing")
+		return []byte{}, errMarshalInvalidData
 	}
 
-	e := v.Elem()
+	// e :=
 
 	c := encoder{buf: new(bytes.Buffer)}
-	if err := c.marshal(e); err != nil {
+	if err := c.marshal(v); err != nil {
 		return []byte{}, err
 	}
 
@@ -29,15 +33,23 @@ func Marshal(i interface{}) ([]byte, error) {
 func MarshalSlice(i interface{}) ([]byte, error) {
 	e := ptrValue(i)
 
-	if !e.IsValid() || e.Type().Kind() != reflect.Slice {
-		return []byte{}, errors.New("jsonapi: only slice allowed for parsing")
+	if !e.IsValid() {
+		return []byte{}, errMarshalInvalidData
+	}
+
+	if e.Type().Kind() == reflect.Ptr {
+		e = e.Elem()
+	}
+
+	if e.Type().Kind() != reflect.Slice {
+		return []byte{}, errMarshalInvalidData
 	}
 
 	c := encoder{buf: new(bytes.Buffer)}
 	c.buf.WriteByte('[')
 	iLen := e.Len()
 	for i := 0; i < iLen; i++ {
-		if err := c.marshal(e.Index(i)); err != nil {
+		if err := c.marshal(valPtr(e.Index(i))); err != nil {
 			return []byte{}, err
 		}
 		if i < iLen-1 {
@@ -54,8 +66,20 @@ type encoder struct {
 
 func (e *encoder) marshal(el reflect.Value) error {
 	t := el.Type()
+	if t.Implements(marshalerType) {
+		m := el.Interface().(Marshaler)
+		if err := m.MarshalJSONAPI(); err != nil {
+			return err
+		}
+	}
+
+	if t.Kind() == reflect.Ptr {
+		el = el.Elem()
+	}
+
+	t = el.Type()
 	if t.Kind() != reflect.Struct {
-		return errors.New("jsonapi: only struct allowed for parsing")
+		return errMarshalInvalidData
 	}
 
 	f := types.get(t)
