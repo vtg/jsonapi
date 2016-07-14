@@ -86,11 +86,7 @@ func TestMarshalNonAPI(t *testing.T) {
 
 func TestMarshalError(t *testing.T) {
 	_, err := Marshal(nil)
-	if err == nil {
-		t.Error("no error occured with wrong value\n")
-	} else {
-		assertEqual(t, errMarshalInvalidData, err)
-	}
+	assertEqual(t, errMarshalInvalidData, err)
 }
 
 func TestMarshalSlice(t *testing.T) {
@@ -120,23 +116,11 @@ func TestMarshalSlice(t *testing.T) {
 
 func TestMarshalSliceError(t *testing.T) {
 	_, err := MarshalSlice(nil)
-	if err == nil {
-		t.Error("no error occured with wrong value\n")
-	} else {
-		assertEqual(t, errMarshalInvalidData, err)
-	}
+	assertEqual(t, errMarshalInvalidData, err)
 	_, err = MarshalSlice("asd")
-	if err == nil {
-		t.Error("no error occured with wrong value\n")
-	} else {
-		assertEqual(t, errMarshalInvalidData, err)
-	}
+	assertEqual(t, errMarshalInvalidData, err)
 	_, err = MarshalSlice([]string{"asd"})
-	if err == nil {
-		t.Error("no error occured with wrong value\n")
-	} else {
-		assertEqual(t, errMarshalInvalidData, err)
-	}
+	assertEqual(t, errMarshalInvalidData, err)
 }
 
 func BenchmarkMarshal(b *testing.B) {

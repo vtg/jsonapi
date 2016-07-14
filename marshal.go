@@ -19,8 +19,6 @@ func Marshal(i interface{}) ([]byte, error) {
 		return []byte{}, errMarshalInvalidData
 	}
 
-	// e :=
-
 	c := encoder{buf: new(bytes.Buffer)}
 	if err := c.marshal(v); err != nil {
 		return []byte{}, err
