@@ -84,13 +84,8 @@ func (s *typesCache) get(t reflect.Type) *fields {
 
 	f = &fields{}
 
-	for i := 0; i < t.NumField(); i++ {
-		fd := t.Field(i)
-
-		if fd.PkgPath != "" && !fd.Anonymous {
-			continue
-		}
-
+	for _, idx := range typeFields(t, []int{}) {
+		fd := t.FieldByIndex(idx)
 		tag := fd.Tag.Get("jsonapi")
 		if tag == "" {
 			continue
@@ -99,7 +94,7 @@ func (s *typesCache) get(t reflect.Type) *fields {
 		keys := strings.SplitN(tag, ",", 3)
 		switch keys[0] {
 		case "id":
-			f.id = fd.Index
+			f.id = idx
 			if len(keys) > 1 {
 				f.stype = keys[1]
 			}
@@ -112,7 +107,7 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			if len(keys) > 2 {
 				ro = keys[2] == "readonly"
 			}
-			f.attrs = append(f.attrs, field{idx: fd.Index, name: name, readonly: ro})
+			f.attrs = append(f.attrs, field{idx: idx, name: name, readonly: ro})
 		}
 	}
 	s.m[t] = f
@@ -151,4 +146,25 @@ func valuePtr(v reflect.Value) reflect.Value {
 		return v.Addr()
 	}
 	return v
+}
+
+func typeFields(t reflect.Type, idx []int) (res [][]int) {
+	for i := 0; i < t.NumField(); i++ {
+		fd := t.Field(i)
+
+		if fd.PkgPath != "" && !fd.Anonymous {
+			continue
+		}
+
+		idx1 := append(idx, fd.Index...)
+		if fd.Anonymous && fd.Type.Kind() == reflect.Struct {
+			for _, v := range typeFields(fd.Type, idx1) {
+				res = append(res, v)
+			}
+			continue
+		}
+
+		res = append(res, idx1)
+	}
+	return
 }
