@@ -93,7 +93,7 @@ func TestMarshalNonAPI(t *testing.T) {
 		Excluded: "include this",
 	}
 
-	want := `{"ID":100,"Name":"John","Address":{"country":"CTR","city":"DT"},"Excluded":"include this"}` + "\n"
+	want := `{"ID":100,"Name":"John","Address":{"country":"CTR","city":"DT"},"Excluded":"include this"}`
 
 	res, err := Marshal(&s)
 	assertNil(t, err)

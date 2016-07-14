@@ -91,7 +91,10 @@ func (e *encoder) marshal(el reflect.Value) error {
 
 	f := types.get(t)
 	if !f.api() {
-		return json.NewEncoder(e).Encode(el.Interface())
+		b, err := json.Marshal(el.Interface())
+		e.Write(b)
+		return err
+		// return json.NewEncoder(e).Encode(el.Interface())
 	}
 
 	e.WriteByte('{')
