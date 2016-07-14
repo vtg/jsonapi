@@ -43,6 +43,46 @@ func assertNil(t *testing.T, v interface{}, descr ...string) {
 	}
 }
 
+type testStructUnmarshaler struct {
+	ID   uint64 `jsonapi:"id,test-structs1"`
+	Name string `jsonapi:"attr,name"`
+}
+
+func (t *testStructUnmarshaler) UnmarshalJSONAPI(b []byte) error {
+	t.Name = "custom name"
+	return nil
+}
+
+func TestUnmarshaler(t *testing.T) {
+	s := testStructUnmarshaler{}
+	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"Name":"John"}}}`
+
+	err := Unmarshal([]byte(req), &s)
+	assertNil(t, err)
+	assertEqual(t, "custom name", s.Name)
+}
+
+type testStructBeforeUnmarshaler struct {
+	ID    uint64 `jsonapi:"id,test-structs1"`
+	Name  string `jsonapi:"attr,name"`
+	Email string `jsonapi:"attr,email"`
+}
+
+func (t *testStructBeforeUnmarshaler) BeforeUnmarshalJSONAPI() error {
+	t.Email = "changed"
+	return nil
+}
+
+func TestBeforeUnmarshaler(t *testing.T) {
+	s := testStructBeforeUnmarshaler{}
+	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"Name":"John"}}}`
+
+	err := Unmarshal([]byte(req), &s)
+	assertNil(t, err)
+	assertEqual(t, "John", s.Name)
+	assertEqual(t, "changed", s.Email)
+}
+
 type testStruct1 struct {
 	ID         uint64                 `jsonapi:"id,test-structs1"`
 	String     string                 `jsonapi:"attr,string"`

@@ -11,17 +11,29 @@ var types = typesCache{m: make(map[reflect.Type]*fields)}
 
 // Marshaler interface
 type Marshaler interface {
-	MarshalJSONAPI() error
+	MarshalJSONAPI() ([]byte, error)
+}
+
+// BeforeMarshaler interface
+type BeforeMarshaler interface {
+	BeforeMarshalJSONAPI() error
 }
 
 // Unmarshaler interface
 type Unmarshaler interface {
-	UnmarshalJSONAPI() error
+	UnmarshalJSONAPI([]byte) error
+}
+
+// BeforeUnmarshaler interface
+type BeforeUnmarshaler interface {
+	BeforeUnmarshalJSONAPI() error
 }
 
 var (
-	marshalerType   = reflect.TypeOf(new(Marshaler)).Elem()
-	unmarshalerType = reflect.TypeOf(new(Unmarshaler)).Elem()
+	marshalerType         = reflect.TypeOf(new(Marshaler)).Elem()
+	beforeMarshalerType   = reflect.TypeOf(new(BeforeMarshaler)).Elem()
+	unmarshalerType       = reflect.TypeOf(new(Unmarshaler)).Elem()
+	beforeUnmarshalerType = reflect.TypeOf(new(BeforeUnmarshaler)).Elem()
 )
 
 // MetaData struct
@@ -126,15 +138,15 @@ func validKey(s string) bool {
 	return true
 }
 
-func ptrValue(i interface{}) reflect.Value {
+func interfacePtr(i interface{}) reflect.Value {
 	v := reflect.ValueOf(i)
 	if !v.IsValid() {
 		return v
 	}
-	return valPtr(v)
+	return valuePtr(v)
 }
 
-func valPtr(v reflect.Value) reflect.Value {
+func valuePtr(v reflect.Value) reflect.Value {
 	if v.Type().Kind() != reflect.Ptr && v.CanAddr() {
 		return v.Addr()
 	}

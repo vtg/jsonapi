@@ -35,25 +35,24 @@ func (c Change) String() string {
 
 // Unmarshal decoding json api compatible request
 func Unmarshal(b []byte, i interface{}) error {
-	v := ptrValue(i)
+	v := interfacePtr(i)
 	if !v.IsValid() {
 		return errMarshalInvalidData
 	}
 
 	d := decoder{}
-	return d.unmarshal(b, v.Elem())
+	return d.unmarshal(b, v)
 }
 
 // UnmarshalWithChanges decoding json api compatible request into structure
 // and returning changes
 func UnmarshalWithChanges(b []byte, i interface{}) (Changes, error) {
-	v := ptrValue(i)
+	v := interfacePtr(i)
 	if !v.IsValid() {
-		return []Change{}, errMarshalInvalidData
+		return Changes{}, errMarshalInvalidData
 	}
-
 	d := decoder{withChanges: true}
-	err := d.unmarshal(b, v.Elem())
+	err := d.unmarshal(b, v)
 	return d.changes, err
 }
 
@@ -87,6 +86,17 @@ type decoder struct {
 // Unmarshal decoding json api compatible request
 func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 	t := e.Type()
+
+	if t.Implements(unmarshalerType) {
+		m := e.Interface().(Unmarshaler)
+		return m.UnmarshalJSONAPI(b)
+	}
+
+	if t.Kind() == reflect.Ptr {
+		e = e.Elem()
+	}
+
+	t = e.Type()
 	if t.Kind() != reflect.Struct {
 		return errMarshalInvalidData
 	}
@@ -106,9 +116,18 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 		return fmt.Errorf("jsonapi: can't unmarshal item of type '%s' into item of type '%s'", req.Data.Type, f.stype)
 	}
 
-	nt := reflect.New(t).Interface()
-	nv := reflect.ValueOf(nt).Elem()
-	err = json.Unmarshal(req.Data.Attributes, &nt)
+	nti := reflect.New(t).Interface()
+	nvv := reflect.ValueOf(nti)
+
+	if nvv.Type().Implements(beforeUnmarshalerType) {
+		m := nti.(BeforeUnmarshaler)
+		if err := m.BeforeUnmarshalJSONAPI(); err != nil {
+			return err
+		}
+	}
+
+	nv := nvv.Elem()
+	err = json.Unmarshal(req.Data.Attributes, &nti)
 	if err != nil {
 		return err
 	}

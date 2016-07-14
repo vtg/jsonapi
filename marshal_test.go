@@ -26,25 +26,41 @@ type testStructMarshaler struct {
 	Name string `jsonapi:"attr,name"`
 }
 
-func (t *testStructMarshaler) MarshalJSONAPI() error {
+func (t *testStructMarshaler) MarshalJSONAPI() ([]byte, error) {
+	return []byte("custom"), nil
+}
+
+type testStructBeforeMarshaler struct {
+	ID   uint64 `jsonapi:"id,test-structs"`
+	Name string `jsonapi:"attr,name"`
+}
+
+func (t *testStructBeforeMarshaler) BeforeMarshalJSONAPI() error {
 	t.Name = "changed"
 	return nil
 }
 
 func TestMarshaler(t *testing.T) {
 	s := testStructMarshaler{ID: 100}
-	want := `{"id":"100","type":"test-structs","attributes":{"name":"changed"}}`
+	want := `custom`
+	res, err := Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
 
+func TestBeforeMarshaler(t *testing.T) {
+	s := testStructBeforeMarshaler{ID: 100}
+	want := `{"id":"100","type":"test-structs","attributes":{"name":"changed"}}`
 	res, err := Marshal(&s)
 	assertNil(t, err)
 	assertEqual(t, want, string(res))
 }
 
 func TestMarshalerSlice(t *testing.T) {
-	s := testStructMarshaler{ID: 100}
-	s1 := testStructMarshaler{ID: 101}
+	s := testStructBeforeMarshaler{ID: 100}
+	s1 := testStructBeforeMarshaler{ID: 101}
 
-	r := []testStructMarshaler{s, s1}
+	r := []testStructBeforeMarshaler{s, s1}
 
 	want := `{"id":"100","type":"test-structs","attributes":{"name":"changed"}}`
 	want1 := `{"id":"101","type":"test-structs","attributes":{"name":"changed"}}`

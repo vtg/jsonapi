@@ -14,7 +14,7 @@ var (
 
 // Marshal item to json api format
 func Marshal(i interface{}) ([]byte, error) {
-	v := ptrValue(i)
+	v := interfacePtr(i)
 	if !v.IsValid() {
 		return []byte{}, errMarshalInvalidData
 	}
@@ -29,7 +29,7 @@ func Marshal(i interface{}) ([]byte, error) {
 
 // MarshalSlice marshalling items to json api format
 func MarshalSlice(i interface{}) ([]byte, error) {
-	e := ptrValue(i)
+	e := interfacePtr(i)
 
 	if !e.IsValid() {
 		return []byte{}, errMarshalInvalidData
@@ -47,7 +47,7 @@ func MarshalSlice(i interface{}) ([]byte, error) {
 	c.buf.WriteByte('[')
 	iLen := e.Len()
 	for i := 0; i < iLen; i++ {
-		if err := c.marshal(valPtr(e.Index(i))); err != nil {
+		if err := c.marshal(valuePtr(e.Index(i))); err != nil {
 			return []byte{}, err
 		}
 		if i < iLen-1 {
@@ -64,11 +64,20 @@ type encoder struct {
 
 func (e *encoder) marshal(el reflect.Value) error {
 	t := el.Type()
-	if t.Implements(marshalerType) {
-		m := el.Interface().(Marshaler)
-		if err := m.MarshalJSONAPI(); err != nil {
+	if t.Implements(beforeMarshalerType) {
+		m := el.Interface().(BeforeMarshaler)
+		if err := m.BeforeMarshalJSONAPI(); err != nil {
 			return err
 		}
+	}
+	if t.Implements(marshalerType) {
+		m := el.Interface().(Marshaler)
+		b, err := m.MarshalJSONAPI()
+		if err != nil {
+			return err
+		}
+		e.buf.Write(b)
+		return nil
 	}
 
 	if t.Kind() == reflect.Ptr {
