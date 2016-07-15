@@ -2,6 +2,28 @@ package jsonapi
 
 import "strings"
 
+var (
+	// ErrorRecordNotFound returns Error for record not found behaviour
+	ErrorRecordNotFound = Error{
+		Status: "404",
+		Title:  "Record Not Found",
+		Detail: "The record you are looking for does not exist",
+	}
+	// ErrorPageNotFound returns Error for page not found behaviour
+	ErrorPageNotFound = Error{
+		Status: "404",
+		Title:  "Page Not Found",
+		Detail: "The page you are looking for does not exist",
+	}
+
+	// ErrorUnauthorized returns Error for unauthorized request
+	ErrorUnauthorized = Error{
+		Status: "401",
+		Title:  "Unauthorized Request",
+		Detail: "You are forbidden from accessing this page",
+	}
+)
+
 // ErrorSource type
 type ErrorSource struct {
 	Pointer string `json:"pointer"`
@@ -60,24 +82,6 @@ func (e Errors) Error() string {
 	return strings.Join(msgs, ",")
 }
 
-// ErrorRecordNotFound creating Error for record not found behaviour
-func ErrorRecordNotFound() Error {
-	return Error{
-		Status: "404",
-		Title:  "Record Not Found",
-		Detail: "The record you are looking for does not exist",
-	}
-}
-
-// ErrorPageNotFound creating Error for page not found behaviour
-func ErrorPageNotFound() Error {
-	return Error{
-		Status: "404",
-		Title:  "Page Not Found",
-		Detail: "The page you are looking for does not exist",
-	}
-}
-
 // ErrorInternal creating Error for internal error
 func ErrorInternal(details string) Error {
 	return Error{
@@ -103,14 +107,5 @@ func ErrorInprocessible(details string) Error {
 		Status: "400",
 		Title:  "Inprocessible Entry",
 		Detail: details,
-	}
-}
-
-// ErrorUnauthorized creating Error for unauthorized request
-func ErrorUnauthorized() Error {
-	return Error{
-		Status: "401",
-		Title:  "Unauthorized Request",
-		Detail: "You are forbidden from accessing this page",
 	}
 }
