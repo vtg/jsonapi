@@ -60,6 +60,7 @@ func MarshalSlice(i interface{}) ([]byte, error) {
 
 type encoder struct {
 	bytes.Buffer
+	buffer [64]byte
 }
 
 func (e *encoder) marshal(el reflect.Value) error {
@@ -94,7 +95,6 @@ func (e *encoder) marshal(el reflect.Value) error {
 		b, err := json.Marshal(el.Interface())
 		e.Write(b)
 		return err
-		// return json.NewEncoder(e).Encode(el.Interface())
 	}
 
 	e.WriteByte('{')
@@ -103,9 +103,9 @@ func (e *encoder) marshal(el reflect.Value) error {
 	id := el.FieldByIndex(f.id)
 	switch id.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		e.WriteString(strconv.FormatUint(id.Uint(), 10))
+		e.Write(strconv.AppendUint(e.buffer[:0], id.Uint(), 10))
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-		e.WriteString(strconv.FormatInt(id.Int(), 10))
+		e.Write(strconv.AppendInt(e.buffer[:0], id.Int(), 10))
 	case reflect.String:
 		e.WriteString(id.String())
 	}
