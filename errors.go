@@ -53,14 +53,6 @@ func (e Errors) HasErrors() bool {
 	return len(e.Errors) > 0
 }
 
-// ReturnError returns error if errors present and nil if empty
-func (e Errors) ReturnError() error {
-	if e.HasErrors() {
-		return e
-	}
-	return nil
-}
-
 // AddError adds Error to errors
 func (e *Errors) AddError(err error) {
 	if err == nil {
@@ -99,7 +91,7 @@ func ErrorInternal(details string) Error {
 func ErrorInvalidAttribute(pointer, details string) Error {
 	return Error{
 		Status: "422",
-		Source: &ErrorSource{Pointer: pointer},
+		Source: &ErrorSource{Pointer: "/data/attributes/" + pointer},
 		Title:  "Invalid Attribute",
 		Detail: details,
 	}
