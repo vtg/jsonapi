@@ -59,6 +59,11 @@ func UnmarshalWithChanges(b []byte, i interface{}) (Changes, error) {
 // Changes store
 type Changes []Change
 
+// Empty returns true if there are no changes
+func (c Changes) Empty() bool {
+	return len(c) == 0
+}
+
 // Find changed field by name
 func (c Changes) Find(k string) Change {
 	for i := range c {
