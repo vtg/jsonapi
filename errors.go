@@ -1,5 +1,7 @@
 package jsonapi
 
+import "strings"
+
 // ErrorSource type
 type ErrorSource struct {
 	Pointer string `json:"pointer"`
@@ -20,7 +22,43 @@ func (e Error) Error() string {
 }
 
 // Errors type
-type Errors []Errors
+type Errors struct {
+	Errors []Error `json:"errors,omitempty"`
+}
+
+// Empty adds Error to errors
+func (e Errors) Empty() bool {
+	return len(e.Errors) == 0
+}
+
+// ReturnError returns error if errors present and nil if empty
+func (e Errors) ReturnError() error {
+	if e.Empty() {
+		return nil
+	}
+	return e
+}
+
+// AddError adds Error to errors
+func (e *Errors) AddError(err error) {
+	switch err.(type) {
+	case Error:
+		e.Errors = append(e.Errors, err.(Error))
+	case Errors:
+		e.Errors = append(e.Errors, err.(Errors).Errors...)
+	default:
+		e.Errors = append(e.Errors, ErrorInternal(err.Error()))
+	}
+}
+
+// Error returns Detail to implement error interface
+func (e Errors) Error() string {
+	msgs := make([]string, 0, len(e.Errors))
+	for k := range e.Errors {
+		msgs = append(msgs, e.Errors[k].Detail)
+	}
+	return strings.Join(msgs, ",")
+}
 
 // ErrorRecordNotFound creating Error for record not found behaviour
 func ErrorRecordNotFound() Error {

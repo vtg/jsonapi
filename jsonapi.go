@@ -45,14 +45,9 @@ type MetaData struct {
 
 // Response structure for json api response
 type Response struct {
-	Data   interface{} `json:"data,omitempty"`
-	Errors []Error     `json:"errors,omitempty"`
-	Meta   *MetaData   `json:"meta,omitempty"`
-}
-
-// AddError adds Error to errors
-func (r *Response) AddError(e Error) {
-	r.Errors = append(r.Errors, e)
+	Data interface{} `json:"data,omitempty"`
+	Meta *MetaData   `json:"meta,omitempty"`
+	Errors
 }
 
 type fields struct {
