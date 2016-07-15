@@ -48,17 +48,17 @@ type Errors struct {
 	Errors []Error `json:"errors,omitempty"`
 }
 
-// Empty adds Error to errors
-func (e Errors) Empty() bool {
-	return len(e.Errors) == 0
+// HasErrors adds Error to errors
+func (e Errors) HasErrors() bool {
+	return len(e.Errors) > 0
 }
 
 // ReturnError returns error if errors present and nil if empty
 func (e Errors) ReturnError() error {
-	if e.Empty() {
-		return nil
+	if e.HasErrors() {
+		return e
 	}
-	return e
+	return nil
 }
 
 // AddError adds Error to errors

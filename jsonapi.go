@@ -50,6 +50,14 @@ type Response struct {
 	Errors
 }
 
+// StatusCode returns first error status code or success
+func (r Errors) StatusCode() int {
+	if r.HasErrors() {
+		return strToInt(r.Errors[0].Status)
+	}
+	return 200
+}
+
 type fields struct {
 	id    []int
 	stype string
