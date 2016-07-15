@@ -117,6 +117,12 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 	}
 
 	nti := reflect.New(t).Interface()
+
+	err = json.Unmarshal(req.Data.Attributes, &nti)
+	if err != nil {
+		return err
+	}
+
 	nvv := reflect.ValueOf(nti)
 
 	if nvv.Type().Implements(beforeUnmarshalerType) {
@@ -127,10 +133,6 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 	}
 
 	nv := nvv.Elem()
-	err = json.Unmarshal(req.Data.Attributes, &nti)
-	if err != nil {
-		return err
-	}
 
 	if d.withChanges {
 		d.changes = make([]Change, 0, len(f.attrs))
