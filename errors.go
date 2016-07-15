@@ -63,6 +63,10 @@ func (e Errors) ReturnError() error {
 
 // AddError adds Error to errors
 func (e *Errors) AddError(err error) {
+	if err == nil {
+		return
+	}
+
 	switch err.(type) {
 	case Error:
 		e.Errors = append(e.Errors, err.(Error))
