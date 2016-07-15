@@ -14,7 +14,7 @@ type Validator struct {
 // Verify returns error if errors present and nil if empty
 func (v Validator) Verify() error {
 	if v.HasErrors() {
-		return v
+		return v.Errors
 	}
 	return nil
 }
