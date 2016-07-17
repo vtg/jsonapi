@@ -97,11 +97,11 @@ func ErrorInvalidAttribute(pointer, details string) Error {
 	}
 }
 
-// ErrorInprocessible creating Error for inprocessible entries
-func ErrorInprocessible(details string) Error {
+// ErrorBadRequest creating Error for inprocessible entries
+func ErrorBadRequest(details string) Error {
 	return Error{
 		Status: "400",
-		Title:  "Inprocessible Entry",
+		Title:  "Bad Request",
 		Detail: details,
 	}
 }
