@@ -28,6 +28,20 @@ type Query struct {
 	Queries []Keymap
 }
 
+// DefaultSort set default sort column
+func (q *Query) DefaultSort(s string) {
+	if s != "" && len(q.Sort) == 0 {
+		q.Sort = []string{s}
+	}
+}
+
+// DefaultLimit set default limit
+func (q *Query) DefaultLimit(n int) {
+	if q.Limit == 0 {
+		q.Limit = 30
+	}
+}
+
 // QueryParams takes URL params and returns parsed params for jsonapi
 func QueryParams(m map[string][]string) *Query {
 	p := new(Query)
