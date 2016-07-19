@@ -62,6 +62,7 @@ type fields struct {
 	id    []int
 	stype string
 	attrs []field
+	links []field
 }
 
 func (f fields) api() bool {
@@ -116,6 +117,12 @@ func (s *typesCache) get(t reflect.Type) *fields {
 				ro = keys[2] == "readonly"
 			}
 			f.attrs = append(f.attrs, field{idx: idx, name: name, readonly: ro})
+		case "link":
+			name := fd.Name
+			if len(keys) > 1 && validKey(keys[1]) {
+				name = keys[1]
+			}
+			f.links = append(f.links, field{idx: idx, name: name})
 		}
 	}
 	s.m[t] = f

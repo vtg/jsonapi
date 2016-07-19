@@ -14,6 +14,12 @@ type testStruct struct {
 	Excluded string
 }
 
+type testLinkStruct struct {
+	ID   uint64 `jsonapi:"id,test-structs"`
+	Name string `jsonapi:"attr,name"`
+	Self string `jsonapi:"link,self"`
+}
+
 type testStructNonAPI struct {
 	ID       uint64
 	Name     string
@@ -79,6 +85,20 @@ func TestMarshal(t *testing.T) {
 	}
 
 	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"}}}`
+
+	res, err := Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
+
+func TestMarshalLinks(t *testing.T) {
+	s := testLinkStruct{
+		ID:   100,
+		Name: "John",
+		Self: "/test/1",
+	}
+
+	want := `{"id":"100","type":"test-structs","attributes":{"name":"John"},"links":{"self":"/test/1"}}`
 
 	res, err := Marshal(&s)
 	assertNil(t, err)

@@ -130,6 +130,25 @@ func (e *encoder) marshal(el reflect.Value) error {
 		}
 		e.WriteByte('}')
 	}
+	aLen = len(f.links)
+	if aLen > 0 {
+		e.WriteString(`,"links":{`)
+		for k := range f.links {
+			e.WriteByte('"')
+			e.WriteString(f.links[k].name)
+			e.WriteByte('"')
+			e.WriteByte(':')
+			b, err := json.Marshal(el.FieldByIndex(f.links[k].idx).Interface())
+			if err != nil {
+				return err
+			}
+			e.Write(b)
+			if k < aLen-1 {
+				e.WriteByte(',')
+			}
+		}
+		e.WriteByte('}')
+	}
 	e.WriteByte('}')
 
 	return nil
