@@ -60,6 +60,17 @@ func (v *Validator) Int64(value int64, pointer string, min, max int64) {
 	}
 }
 
+// Uint64 validates int min, max. -1 for any
+// 	v.Uint64(Uint64Value, "number", -1, 11)  // max 18
+func (v *Validator) Uint64(value uint64, pointer string, min, max int) {
+	if min > 0 && value < uint64(min) {
+		v.AddError(ErrorInvalidAttribute(pointer, fmt.Sprint("min value is", min)))
+	}
+	if max > 0 && value > uint64(max) {
+		v.AddError(ErrorInvalidAttribute(pointer, fmt.Sprint("max value is", max)))
+	}
+}
+
 // Float32 validates int min, max. -1 for any
 // 	v.Float32(Float32Value, "number", -1, 11)  // max 18
 func (v *Validator) Float32(value float32, pointer string, min, max float32) {
