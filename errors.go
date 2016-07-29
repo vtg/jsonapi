@@ -105,3 +105,12 @@ func ErrorBadRequest(details string) Error {
 		Detail: details,
 	}
 }
+
+// ErrorForbidden creating Error for forbidden entries
+func ErrorForbidden(details string) Error {
+	return Error{
+		Status: "403",
+		Title:  "Forbidden",
+		Detail: details,
+	}
+}
