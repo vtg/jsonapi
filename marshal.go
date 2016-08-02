@@ -123,7 +123,13 @@ func (e *encoder) marshal(el reflect.Value) error {
 			if err != nil {
 				return err
 			}
+			if f.attrs[k].quote {
+				e.WriteByte('"')
+			}
 			e.Write(b)
+			if f.attrs[k].quote {
+				e.WriteByte('"')
+			}
 			if k < aLen-1 {
 				e.WriteByte(',')
 			}

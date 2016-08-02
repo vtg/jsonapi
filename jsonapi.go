@@ -73,6 +73,7 @@ type field struct {
 	idx      []int
 	name     string
 	readonly bool
+	quote    bool
 }
 
 type typesCache struct {
@@ -108,15 +109,21 @@ func (s *typesCache) get(t reflect.Type) *fields {
 				f.stype = keys[1]
 			}
 		case "attr":
-			name := fd.Name
+			fld := field{idx: idx, name: fd.Name}
 			if len(keys) > 1 && validKey(keys[1]) {
-				name = keys[1]
+				fld.name = keys[1]
 			}
-			ro := false
 			if len(keys) > 2 {
-				ro = keys[2] == "readonly"
+				for _, v := range keys[2:] {
+					switch v {
+					case "readonly":
+						fld.readonly = true
+					case "string":
+						fld.quote = true
+					}
+				}
 			}
-			f.attrs = append(f.attrs, field{idx: idx, name: name, readonly: ro})
+			f.attrs = append(f.attrs, fld)
 		case "link":
 			name := fd.Name
 			if len(keys) > 1 && validKey(keys[1]) {

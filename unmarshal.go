@@ -137,7 +137,9 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 
 			curVal := e1.FieldByIndex(attr.idx)
 			newVal := ne.FieldByIndex(attr.idx)
-
+			if attr.quote {
+				v = unquote(v)
+			}
 			err = json.Unmarshal(v, newVal.Addr().Interface())
 			if err != nil {
 				return err

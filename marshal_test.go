@@ -8,10 +8,11 @@ type testSub struct {
 }
 
 type testStruct struct {
-	ID       uint64  `jsonapi:"id,test-structs"`
-	Name     string  `jsonapi:"attr,name"`
-	Address  testSub `jsonapi:"attr,address-at"`
-	Excluded string
+	ID        uint64  `jsonapi:"id,test-structs"`
+	Name      string  `jsonapi:"attr,name"`
+	Address   testSub `jsonapi:"attr,address-at"`
+	IntString uint64  `jsonapi:"attr,intstring,string"`
+	Excluded  string
 }
 
 type testLinkStruct struct {
@@ -84,7 +85,7 @@ func TestMarshal(t *testing.T) {
 		Excluded: "dont include this",
 	}
 
-	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"}}}`
+	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"},"intstring":"0"}}`
 
 	res, err := Marshal(&s)
 	assertNil(t, err)
@@ -140,8 +141,8 @@ func TestMarshalSlice(t *testing.T) {
 	}
 
 	r := []testStruct{s, s1}
-	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"}}}`
-	want1 := `{"id":"101","type":"test-structs","attributes":{"name":"John1","address-at":{"country":"CTR1","city":"DT1"}}}`
+	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"},"intstring":"0"}}`
+	want1 := `{"id":"101","type":"test-structs","attributes":{"name":"John1","address-at":{"country":"CTR1","city":"DT1"},"intstring":"0"}}`
 
 	want = "[" + want + "," + want1 + "]"
 

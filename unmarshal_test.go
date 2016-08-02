@@ -97,6 +97,8 @@ type testStruct1 struct {
 	Map        map[string]interface{} `jsonapi:"attr,map"`
 	Slice      []int                  `jsonapi:"attr,slice"`
 	Sub        testSub                `jsonapi:"attr,sub"`
+	Int        int                    `jsonapi:"attr,int"`
+	IntStr     int                    `jsonapi:"attr,intstr,string"`
 	WontUpdate string                 `jsonapi:"attr,wont-update,readonly"`
 	Excluded   string
 }
@@ -104,7 +106,7 @@ type testStruct1 struct {
 func TestUnmarshalStatic(t *testing.T) {
 	s := testStruct1{}
 
-	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str","bool":true,"map":{"a":"1","b":"2","c":{"a1":"11"}},"slice":[1,2,3],"sub":{"country":"CTR","city":"DT"},"wont-update":"readonly string","Excluded":"no"}}}`
+	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str","int":1,"intstr":"2","bool":true,"map":{"a":"1","b":"2","c":{"a1":"11"}},"slice":[1,2,3],"sub":{"country":"CTR","city":"DT"},"wont-update":"readonly string","Excluded":"no"}}}`
 
 	err := Unmarshal([]byte(req), &s)
 	assertNil(t, err)
@@ -116,6 +118,8 @@ func TestUnmarshalStatic(t *testing.T) {
 	assertEqual(t, wantSlice, s.Slice)
 	wantSub := testSub{Country: "CTR", City: "DT"}
 	assertEqual(t, wantSub, s.Sub)
+	assertEqual(t, 1, s.Int)
+	assertEqual(t, 2, s.IntStr)
 	assertEqual(t, "", s.WontUpdate)
 	assertEqual(t, "", s.Excluded)
 }
