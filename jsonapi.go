@@ -24,16 +24,16 @@ type Unmarshaler interface {
 	UnmarshalJSONAPI([]byte) error
 }
 
-// BeforeUnmarshaler interface
-type BeforeUnmarshaler interface {
-	BeforeUnmarshalJSONAPI() error
+// AfterUnmarshaler interface
+type AfterUnmarshaler interface {
+	AfterUnmarshalJSONAPI() error
 }
 
 var (
-	marshalerType         = reflect.TypeOf(new(Marshaler)).Elem()
-	beforeMarshalerType   = reflect.TypeOf(new(BeforeMarshaler)).Elem()
-	unmarshalerType       = reflect.TypeOf(new(Unmarshaler)).Elem()
-	beforeUnmarshalerType = reflect.TypeOf(new(BeforeUnmarshaler)).Elem()
+	marshalerType        = reflect.TypeOf(new(Marshaler)).Elem()
+	beforeMarshalerType  = reflect.TypeOf(new(BeforeMarshaler)).Elem()
+	unmarshalerType      = reflect.TypeOf(new(Unmarshaler)).Elem()
+	afterUnmarshalerType = reflect.TypeOf(new(AfterUnmarshaler)).Elem()
 )
 
 // MetaData struct

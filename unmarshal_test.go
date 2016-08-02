@@ -43,6 +43,13 @@ func assertNil(t *testing.T, v interface{}, descr ...string) {
 	}
 }
 
+func TestUnquote(t *testing.T) {
+	v := unquote([]byte(`""`))
+	assertEqual(t, []byte(""), v)
+	v = unquote([]byte(`"qwe"`))
+	assertEqual(t, []byte("qwe"), v)
+}
+
 type testStructUnmarshaler struct {
 	ID   uint64 `jsonapi:"id,test-structs1"`
 	Name string `jsonapi:"attr,name"`
@@ -62,20 +69,20 @@ func TestUnmarshaler(t *testing.T) {
 	assertEqual(t, "custom name", s.Name)
 }
 
-type testStructBeforeUnmarshaler struct {
+type testStructAfterUnmarshaler struct {
 	ID    uint64 `jsonapi:"id,test-structs1"`
 	Name  string `jsonapi:"attr,name"`
 	Email string `jsonapi:"attr,email"`
 }
 
-func (t *testStructBeforeUnmarshaler) BeforeUnmarshalJSONAPI() error {
+func (t *testStructAfterUnmarshaler) AfterUnmarshalJSONAPI() error {
 	t.Email = "changed"
 	return nil
 }
 
-func TestBeforeUnmarshaler(t *testing.T) {
-	s := testStructBeforeUnmarshaler{}
-	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"Name":"John"}}}`
+func TestAfterUnmarshaler(t *testing.T) {
+	s := testStructAfterUnmarshaler{}
+	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"name":"John"}}}`
 
 	err := Unmarshal([]byte(req), &s)
 	assertNil(t, err)
@@ -85,7 +92,7 @@ func TestBeforeUnmarshaler(t *testing.T) {
 
 type testStruct1 struct {
 	ID         uint64                 `jsonapi:"id,test-structs1"`
-	String     string                 `jsonapi:"attr,string"`
+	StringName string                 `jsonapi:"attr,string"`
 	Bool       bool                   `jsonapi:"attr,bool"`
 	Map        map[string]interface{} `jsonapi:"attr,map"`
 	Slice      []int                  `jsonapi:"attr,slice"`
@@ -94,14 +101,14 @@ type testStruct1 struct {
 	Excluded   string
 }
 
-func TestUnmarshal(t *testing.T) {
+func TestUnmarshalStatic(t *testing.T) {
 	s := testStruct1{}
 
-	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"String":"str","bool":true,"map":{"a":"1","b":"2","c":{"a1":"11"}},"slice":[1,2,3],"sub":{"country":"CTR","city":"DT"},"wont-update":"readonly string","Excluded":"no"}}}`
+	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str","bool":true,"map":{"a":"1","b":"2","c":{"a1":"11"}},"slice":[1,2,3],"sub":{"country":"CTR","city":"DT"},"wont-update":"readonly string","Excluded":"no"}}}`
 
 	err := Unmarshal([]byte(req), &s)
 	assertNil(t, err)
-	assertEqual(t, "str", s.String)
+	assertEqual(t, "str", s.StringName)
 	assertEqual(t, true, s.Bool)
 	wantMap := map[string]interface{}{"a": "1", "b": "2", "c": map[string]interface{}{"a1": "11"}}
 	assertEqual(t, wantMap, s.Map)
@@ -116,7 +123,7 @@ func TestUnmarshal(t *testing.T) {
 func TestUnmarshalWithChanges(t *testing.T) {
 	s := testStruct1{
 		ID:         100,
-		String:     "str",
+		StringName: "str",
 		Bool:       false,
 		Map:        map[string]interface{}{"a": "1", "b": "2", "c": map[string]interface{}{"a1": "11"}},
 		Slice:      []int{1, 2, 3},
@@ -125,7 +132,7 @@ func TestUnmarshalWithChanges(t *testing.T) {
 		Excluded:   "dont include this",
 	}
 
-	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"String":"str1","bool":true,"map":{"a":"1","b":"22","d":"4","c":{"a1":"111"}},"slice":[1,2,3,4],"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`
+	req := `{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str1","bool":true,"map":{"a":"1","b":"22","d":"4","c":{"a1":"111"}},"slice":[1,2,3,4],"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`
 
 	changes, err := UnmarshalWithChanges([]byte(req), &s)
 	// fmt.Println(changes)
@@ -144,7 +151,7 @@ func TestUnmarshalWithChanges(t *testing.T) {
 func BenchmarkUnmarshalPlain(b *testing.B) {
 	s := testStruct1{
 		ID:         100,
-		String:     "str",
+		StringName: "str",
 		Bool:       false,
 		Map:        map[string]interface{}{"a": "1", "b": "2", "c": map[string]interface{}{"a1": "11"}},
 		Slice:      []int{1, 2, 3},
@@ -152,7 +159,7 @@ func BenchmarkUnmarshalPlain(b *testing.B) {
 		WontUpdate: "never changed",
 		Excluded:   "dont include this",
 	}
-	req := []byte(`{"data":{"id":"100","type":"test-structs1","attributes":{"String":"str1","bool":true,"map":{"a":"1","b":"22","c":{"a1":"111"},"d":"4"},"slice":[1,2,3,4],"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`)
+	req := []byte(`{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str1","bool":true,"map":{"a":"1","b":"22","c":{"a1":"111"},"d":"4"},"slice":[1,2,3,4],"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`)
 	for i := 0; i < b.N; i++ {
 		Unmarshal(req, &s)
 	}
@@ -161,7 +168,7 @@ func BenchmarkUnmarshalPlain(b *testing.B) {
 func BenchmarkUnmarshalChanges(b *testing.B) {
 	s := testStruct1{
 		ID:         100,
-		String:     "str",
+		StringName: "str",
 		Bool:       false,
 		Map:        map[string]interface{}{"a": "1", "b": "2", "c": map[string]interface{}{"a1": "11"}},
 		Slice:      []int{1, 2, 3},
@@ -169,7 +176,7 @@ func BenchmarkUnmarshalChanges(b *testing.B) {
 		WontUpdate: "never changed",
 		Excluded:   "dont include this",
 	}
-	req := []byte(`{"data":{"id":"100","type":"test-structs1","attributes":{"String":"str1","bool":true,"map":{"a":"1","b":"22","c":{"a1":"111"},"d":"4"},"slice":[1,2,3,4],"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`)
+	req := []byte(`{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str1","bool":true,"map":{"a":"1","b":"22","c":{"a1":"111"},"d":"4"},"slice":[1,2,3,4],"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`)
 	for i := 0; i < b.N; i++ {
 		UnmarshalWithChanges(req, &s)
 	}
@@ -178,13 +185,13 @@ func BenchmarkUnmarshalChanges(b *testing.B) {
 func BenchmarkUnmarshalChanges1(b *testing.B) {
 	s := testStruct1{
 		ID:         100,
-		String:     "str",
+		StringName: "str",
 		Bool:       false,
 		Sub:        testSub{Country: "CTR", City: "DT"},
 		WontUpdate: "never changed",
 		Excluded:   "dont include this",
 	}
-	req := []byte(`{"data":{"id":"100","type":"test-structs1","attributes":{"String":"str1","bool":true,"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`)
+	req := []byte(`{"data":{"id":"100","type":"test-structs1","attributes":{"string":"str1","bool":true,"sub":{"country":"CTR","city":"DT1"},"wont-update":"change me","Excluded":"change me"}}}`)
 	for i := 0; i < b.N; i++ {
 		UnmarshalWithChanges(req, &s)
 	}

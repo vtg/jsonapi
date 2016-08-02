@@ -11,9 +11,9 @@ import (
 // Request structure for unmarshaling
 type Request struct {
 	Data struct {
-		ID         json.Number     `json:"id"`
-		Type       string          `json:"type"`
-		Attributes json.RawMessage `json:"attributes"`
+		ID         json.Number                `json:"id"`
+		Type       string                     `json:"type"`
+		Attributes map[string]json.RawMessage `json:"attributes"`
 	} `json:"data"`
 }
 
@@ -97,18 +97,19 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 		return m.UnmarshalJSONAPI(b)
 	}
 
+	e1 := e
 	if t.Kind() == reflect.Ptr {
-		e = e.Elem()
+		e1 = e.Elem()
 	}
 
-	t = e.Type()
-	if t.Kind() != reflect.Struct {
+	t1 := e1.Type()
+	if t1.Kind() != reflect.Struct {
 		return errMarshalInvalidData
 	}
 
-	f := types.get(t)
+	f := types.get(t1)
 	if !f.api() {
-		return fmt.Errorf("jsonapi: %v incompatible with json api", t.Name())
+		return fmt.Errorf("jsonapi: %v incompatible with json api", t1.Name())
 	}
 
 	req := Request{}
@@ -121,42 +122,48 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 		return fmt.Errorf("jsonapi: can't unmarshal item of type '%s' into item of type '%s'", req.Data.Type, f.stype)
 	}
 
-	nti := reflect.New(t).Interface()
-
-	err = json.Unmarshal(req.Data.Attributes, &nti)
-	if err != nil {
-		return err
-	}
-
-	nvv := reflect.ValueOf(nti)
-
-	if nvv.Type().Implements(beforeUnmarshalerType) {
-		m := nti.(BeforeUnmarshaler)
-		if err := m.BeforeUnmarshalJSONAPI(); err != nil {
-			return err
-		}
-	}
-
-	nv := nvv.Elem()
+	ne := reflect.New(t1).Elem()
 
 	if d.withChanges {
 		d.changes = make([]Change, 0, len(f.attrs))
 	}
 
-	for k := range f.attrs {
-		if !f.attrs[k].readonly {
-			if d.withChanges {
-				curVal := e.FieldByIndex(f.attrs[k].idx)
-				newVal := nv.FieldByIndex(f.attrs[k].idx)
-				d.diff(curVal, newVal, f.attrs[k].name)
-				curVal.Set(newVal)
-			} else {
-				e.FieldByIndex(f.attrs[k].idx).Set(nv.FieldByIndex(f.attrs[k].idx))
+	for _, attr := range f.attrs {
+		if !attr.readonly {
+			v, ok := req.Data.Attributes[attr.name]
+			if !ok {
+				continue
 			}
+
+			curVal := e1.FieldByIndex(attr.idx)
+			newVal := ne.FieldByIndex(attr.idx)
+
+			err = json.Unmarshal(v, newVal.Addr().Interface())
+			if err != nil {
+				return err
+			}
+
+			if d.withChanges {
+				d.diff(curVal, newVal, attr.name)
+			}
+
+			curVal.Set(newVal)
 		}
 	}
 
+	if e.Type().Implements(afterUnmarshalerType) {
+		return e.Interface().(AfterUnmarshaler).AfterUnmarshalJSONAPI()
+	}
+
 	return nil
+}
+
+func unquote(b []byte) []byte {
+	l := len(b)
+	if l > 1 && b[0] == '"' && b[l-1] == '"' {
+		return b[1 : l-1]
+	}
+	return b
 }
 
 type mapKeys struct {
@@ -183,7 +190,6 @@ func boolString(b bool) string {
 func (d *decoder) diff(v1, v2 reflect.Value, field string) bool {
 	v1 = getElement(v1)
 	v2 = getElement(v2)
-
 	change := Change{Field: field}
 
 	switch v1.Type().Kind() {
