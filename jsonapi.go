@@ -101,7 +101,7 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			continue
 		}
 
-		keys := strings.SplitN(tag, ",", 3)
+		keys := strings.Split(tag, ",")
 		switch keys[0] {
 		case "id":
 			f.id = idx

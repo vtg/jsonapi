@@ -11,7 +11,7 @@ type testStruct struct {
 	ID        uint64  `jsonapi:"id,test-structs"`
 	Name      string  `jsonapi:"attr,name"`
 	Address   testSub `jsonapi:"attr,address-at"`
-	IntString uint64  `jsonapi:"attr,intstring,string"`
+	IntString uint64  `jsonapi:"attr,intstring,readonly,string"`
 	Excluded  string
 }
 
