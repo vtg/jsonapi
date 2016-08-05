@@ -23,7 +23,7 @@ func (v Validator) Verify() error {
 // 	v.Present(SomeVariable, "name")
 func (v *Validator) Present(value, pointer string) {
 	if value == "" {
-		v.AddError(ErrorInvalidAttribute(pointer, pointer+" can't be blank"))
+		v.AddError(ErrorInvalidAttribute(pointer, pointer+" required"))
 	}
 }
 
@@ -49,6 +49,14 @@ func (v *Validator) Int(value int, pointer string, min, max int) {
 	}
 }
 
+// Int64Present validates if value is not 0
+// 	v.Int64Present(Int64Value, "number")
+func (v *Validator) Int64Present(value int64, pointer string) {
+	if value == 0 {
+		v.AddError(ErrorInvalidAttribute(pointer, pointer+" required"))
+	}
+}
+
 // Int64 validates int min, max. -1 for any
 // 	v.Int64(Int64Value, "number", -1, 11)  // max 18
 func (v *Validator) Int64(value int64, pointer string, min, max int64) {
@@ -57,6 +65,14 @@ func (v *Validator) Int64(value int64, pointer string, min, max int64) {
 	}
 	if max > 0 && value > max {
 		v.AddError(ErrorInvalidAttribute(pointer, fmt.Sprint("max value is", max)))
+	}
+}
+
+// Uint64Present validates if value is not 0
+// 	v.Uint64Present(Uint64Value, "number")
+func (v *Validator) Uint64Present(value uint64, pointer string) {
+	if value == 0 {
+		v.AddError(ErrorInvalidAttribute(pointer, pointer+" required"))
 	}
 }
 
