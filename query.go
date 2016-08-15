@@ -51,7 +51,7 @@ func (q *Query) DefaultSort(s string) {
 // DefaultLimit set default limit
 func (q *Query) DefaultLimit(n int) {
 	if q.Limit == 0 {
-		q.Limit = 30
+		q.Limit = n
 	}
 }
 
