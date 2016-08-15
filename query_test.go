@@ -30,8 +30,16 @@ func TestURLParams(t *testing.T) {
 	assertEqual(t, 10, p.Limit)
 	assertEqual(t, 1, p.Offset)
 	assertEqual(t, []string{"name DESC", "id"}, p.Sort)
-	assertEqual(t, []Keymap{Keymap{"active", "1"}, Keymap{"id", "1,2,3"}}, p.Filters)
-	assertEqual(t, []Keymap{Keymap{"name", "john"}, Keymap{"email", "john1"}}, p.Queries)
+	assertEqual(t, true, len(p.Filters) == 2)
+	v, _ := p.Filters.Get("active")
+	assertEqual(t, "1", v)
+	v, _ = p.Filters.Get("id")
+	assertEqual(t, "1,2,3", v)
+	assertEqual(t, true, len(p.Queries) == 2)
+	v, _ = p.Queries.Get("name")
+	assertEqual(t, "john", v)
+	v, _ = p.Queries.Get("email")
+	assertEqual(t, "john1", v)
 }
 
 func BenchmarkQueryParams(b *testing.B) {

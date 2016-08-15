@@ -5,6 +5,19 @@ import (
 	"strings"
 )
 
+// Keymaps type
+type Keymaps []Keymap
+
+// Get returns value for provided key
+func (k Keymaps) Get(key string) (string, bool) {
+	for _, v := range k {
+		if v[0] == key {
+			return v[1], true
+		}
+	}
+	return "", false
+}
+
 // Keymap type for storing key-value
 type Keymap [2]string
 
@@ -24,8 +37,8 @@ type Query struct {
 	Offset  int
 	Format  string
 	Sort    []string
-	Filters []Keymap
-	Queries []Keymap
+	Filters Keymaps
+	Queries Keymaps
 }
 
 // DefaultSort set default sort column
@@ -46,8 +59,8 @@ func (q *Query) DefaultLimit(n int) {
 func QueryParams(m map[string][]string) *Query {
 	p := new(Query)
 	p.Sort = make([]string, 0, 2)
-	p.Queries = make([]Keymap, 0, 2)
-	p.Filters = make([]Keymap, 0, 2)
+	p.Queries = make(Keymaps, 0, 2)
+	p.Filters = make(Keymaps, 0, 2)
 
 	for key, params := range m {
 		ln := len(params[0])
