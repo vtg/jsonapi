@@ -63,6 +63,26 @@ func TestBeforeMarshaler(t *testing.T) {
 	assertEqual(t, want, string(res))
 }
 
+type testRelations struct {
+	ID   uint64 `jsonapi:"id,test-rels"`
+	Name string `jsonapi:"attr,name"`
+	Rel1 Links  `jsonapi:"rellink,rel1"`
+	// Rel2 Links `jsonapi:"rellink,rel2"`
+}
+
+func TestMarshalRelations(t *testing.T) {
+	s := testRelations{
+		ID:   100,
+		Name: "A",
+		Rel1: Links{Self: "self/1", Related: "rel/1"},
+		// Rel2: Links{Self: "self/2",Related: "rel/2"},
+	}
+	want := `{"id":"100","type":"test-rels","attributes":{"name":"A"},"relationships":{"rel1":{"links":{"self":"self/1","related":"rel/1"}}}}`
+	res, err := Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
+
 func TestMarshalerSlice(t *testing.T) {
 	s := testStructBeforeMarshaler{ID: 100}
 	s1 := testStructBeforeMarshaler{ID: 101}

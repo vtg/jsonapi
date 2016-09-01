@@ -58,11 +58,18 @@ func (r Errors) StatusCode() int {
 	return 200
 }
 
+// Links structure
+type Links struct {
+	Self    string `json:"self,omitempty"`
+	Related string `json:"related,omitempty"`
+}
+
 type fields struct {
 	id    []int
 	stype string
 	attrs []field
 	links []field
+	rels  []field
 }
 
 func (f fields) api() bool {
@@ -74,6 +81,7 @@ type field struct {
 	name     string
 	readonly bool
 	quote    bool
+	link     bool
 }
 
 type typesCache struct {
@@ -130,6 +138,18 @@ func (s *typesCache) get(t reflect.Type) *fields {
 				name = keys[1]
 			}
 			f.links = append(f.links, field{idx: idx, name: name})
+		case "rel":
+			name := fd.Name
+			if len(keys) > 1 && validKey(keys[1]) {
+				name = keys[1]
+			}
+			f.rels = append(f.rels, field{idx: idx, name: name})
+		case "rellink":
+			name := fd.Name
+			if len(keys) > 1 && validKey(keys[1]) {
+				name = keys[1]
+			}
+			f.rels = append(f.rels, field{idx: idx, name: name, link: true})
 		}
 	}
 	s.m[t] = f
