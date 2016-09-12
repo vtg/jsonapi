@@ -115,11 +115,15 @@ func (e *encoder) marshal(el reflect.Value) error {
 	if aLen > 0 {
 		e.WriteString(`","attributes":{`)
 		for k := range f.attrs {
+			ev := el.FieldByIndex(f.attrs[k].idx)
+			if f.attrs[k].skipEmpty && isEmptyValue(ev) {
+				continue
+			}
 			e.WriteByte('"')
 			e.WriteString(f.attrs[k].name)
 			e.WriteByte('"')
 			e.WriteByte(':')
-			b, err := json.Marshal(el.FieldByIndex(f.attrs[k].idx).Interface())
+			b, err := json.Marshal(ev.Interface())
 			if err != nil {
 				return err
 			}
@@ -184,4 +188,23 @@ func (e *encoder) marshal(el reflect.Value) error {
 	e.WriteByte('}')
 
 	return nil
+}
+
+// isEmptyValue taken from go standard encoding/json package
+func isEmptyValue(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Interface, reflect.Ptr:
+		return v.IsNil()
+	}
+	return false
 }

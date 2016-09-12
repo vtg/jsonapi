@@ -15,6 +15,15 @@ type testStruct struct {
 	Excluded  string
 }
 
+type testStructOmit struct {
+	ID      uint64   `jsonapi:"id,test-omits"`
+	Name    string   `jsonapi:"attr,name,omitempty"`
+	Address *testSub `jsonapi:"attr,address,omitempty"`
+	Int     int      `jsonapi:"attr,int,omitempty"`
+	Uint64  uint64   `jsonapi:"attr,uint64,omitempty"`
+	Uint32  uint32   `jsonapi:"attr,uint32,omitempty"`
+}
+
 type testLinkStruct struct {
 	ID   uint64 `jsonapi:"id,test-structs"`
 	Name string `jsonapi:"attr,name"`
@@ -106,6 +115,18 @@ func TestMarshal(t *testing.T) {
 	}
 
 	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"},"intstring":"0"}}`
+
+	res, err := Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
+
+func TestMarshalOmit(t *testing.T) {
+	s := testStructOmit{
+		ID: 100,
+	}
+
+	want := `{"id":"100","type":"test-omits","attributes":{}}`
 
 	res, err := Marshal(&s)
 	assertNil(t, err)

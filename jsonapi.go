@@ -77,11 +77,12 @@ func (f fields) api() bool {
 }
 
 type field struct {
-	idx      []int
-	name     string
-	readonly bool
-	quote    bool
-	link     bool
+	idx       []int
+	name      string
+	readonly  bool
+	quote     bool
+	link      bool
+	skipEmpty bool
 }
 
 type typesCache struct {
@@ -128,6 +129,8 @@ func (s *typesCache) get(t reflect.Type) *fields {
 						fld.readonly = true
 					case "string":
 						fld.quote = true
+					case "omitempty":
+						fld.skipEmpty = true
 					}
 				}
 			}
