@@ -1,9 +1,16 @@
-jsonapi
-======
-
 Package jsonapi is simple JSON API implementation for GO. To read more about JSON API format please visit http://jsonapi.org/
 
-GoDoc https://godoc.org/github.com/vtg/jsonapi
+Current implementation includes:
+
+  - Marshalling
+  - Unmarshalling
+  - Links
+  - Relations Links
+  - Parsing URL Query in json api format
+  - JSON API compatible errors
+  - Validator
+
+For more details please visit GoDoc https://godoc.org/github.com/vtg/jsonapi
 
 #####Author
 
