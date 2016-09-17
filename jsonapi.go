@@ -9,12 +9,20 @@ import (
 
 var types = typesCache{m: make(map[reflect.Type]*fields)}
 
-// Marshaler interface
+// Marshaler interface example
+// 	func (p *Post) MarshalJSONAPI() ([]byte, error) {
+// 		return []byte(`{"custom":"return"}`), nil
+// 	}
 type Marshaler interface {
 	MarshalJSONAPI() ([]byte, error)
 }
 
 // BeforeMarshaler interface
+// 	func (p *Post) BeforeMarshalJSONAPI() error {
+// 		p.SelfLink = fmt.Sprintf("/api/posts/%d", p.ID)
+// 		p.Comments.Related = fmt.Sprintf("/api/posts/%d/comments", p.ID)
+// 		return nil
+// 	}
 type BeforeMarshaler interface {
 	BeforeMarshalJSONAPI() error
 }
