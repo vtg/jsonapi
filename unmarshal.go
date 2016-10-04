@@ -211,7 +211,7 @@ func (d *decoder) diff(v1, v2 reflect.Value, field string) bool {
 		for i := 0; i < t.NumField(); i++ {
 			fd := t.Field(i)
 
-			if fd.PkgPath != "" && !fd.Anonymous {
+			if (fd.PkgPath != "" && !fd.Anonymous) || v1.Kind() != v2.Kind() {
 				continue
 			}
 			d.diff(v1.FieldByIndex(fd.Index), v2.FieldByIndex(fd.Index), change.Field+"."+fd.Name)
