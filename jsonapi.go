@@ -48,9 +48,10 @@ var (
 
 // MetaData struct
 type MetaData struct {
-	Total  int `json:"total"`
-	Limit  int `json:"limit"`
-	Offset int `json:"offset"`
+	Total  int         `json:"total"`
+	Limit  int         `json:"limit"`
+	Offset int         `json:"offset"`
+	Data   interface{} `json:"data,omitempty"`
 }
 
 // Response structure for json api response
