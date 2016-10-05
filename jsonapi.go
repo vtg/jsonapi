@@ -103,13 +103,15 @@ func (r Relation) MarshalJSON() ([]byte, error) {
 		buf.WriteByte('}')
 		if r.Data != nil {
 			buf.WriteByte(',')
-			buf.WriteString(`"data":`)
-			b, err := json.Marshal(r.Data)
-			if err != nil {
-				return []byte{}, err
-			}
-			buf.Write(b)
 		}
+	}
+	if r.Data != nil {
+		buf.WriteString(`"data":`)
+		b, err := json.Marshal(r.Data)
+		if err != nil {
+			return []byte{}, err
+		}
+		buf.Write(b)
 	}
 	buf.WriteByte('}')
 	return buf.Bytes(), nil
