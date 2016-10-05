@@ -73,9 +73,9 @@ func TestBeforeMarshaler(t *testing.T) {
 }
 
 type testRelations struct {
-	ID   uint64 `jsonapi:"id,test-rels"`
-	Name string `jsonapi:"attr,name"`
-	Rel1 Links  `jsonapi:"rellink,rel1"`
+	ID   uint64   `jsonapi:"id,test-rels"`
+	Name string   `jsonapi:"attr,name"`
+	Rel1 Relation `jsonapi:"rel,rel1"`
 	// Rel2 Links `jsonapi:"rellink,rel2"`
 }
 
@@ -83,11 +83,26 @@ func TestMarshalRelations(t *testing.T) {
 	s := testRelations{
 		ID:   100,
 		Name: "A",
-		Rel1: Links{Self: "self/1", Related: "rel/1"},
 		// Rel2: Links{Self: "self/2",Related: "rel/2"},
 	}
-	want := `{"id":"100","type":"test-rels","attributes":{"name":"A"},"relationships":{"rel1":{"links":{"self":"self/1","related":"rel/1"}}}}`
+
+	want := `{"id":"100","type":"test-rels","attributes":{"name":"A"},"relationships":{"rel1":{}}}`
 	res, err := Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+
+	s.Rel1.Links.Self = "self/1"
+	s.Rel1.Links.Related = "rel/1"
+
+	want = `{"id":"100","type":"test-rels","attributes":{"name":"A"},"relationships":{"rel1":{"links":{"self":"self/1","related":"rel/1"}}}}`
+	res, err = Marshal(&s)
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+
+	s.Rel1.Data = "reldata"
+
+	want = `{"id":"100","type":"test-rels","attributes":{"name":"A"},"relationships":{"rel1":{"links":{"self":"self/1","related":"rel/1"},"data":"reldata"}}}`
+	res, err = Marshal(&s)
 	assertNil(t, err)
 	assertEqual(t, want, string(res))
 }

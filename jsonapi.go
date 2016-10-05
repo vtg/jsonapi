@@ -1,6 +1,8 @@
 package jsonapi
 
 import (
+	"bytes"
+	"encoding/json"
 	"reflect"
 	"strings"
 	"sync"
@@ -53,8 +55,9 @@ type MetaData struct {
 
 // Response structure for json api response
 type Response struct {
-	Data interface{} `json:"data,omitempty"`
-	Meta *MetaData   `json:"meta,omitempty"`
+	Data     interface{} `json:"data,omitempty"`
+	Included interface{} `json:"included,omitempty"`
+	Meta     *MetaData   `json:"meta,omitempty"`
 	Errors
 }
 
@@ -70,6 +73,46 @@ func (r Errors) StatusCode() int {
 type Links struct {
 	Self    string `json:"self,omitempty"`
 	Related string `json:"related,omitempty"`
+}
+
+// Relation structure
+type Relation struct {
+	Links Links
+	Data  interface{}
+}
+
+// MarshalJSON marshaller
+func (r Relation) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	if r.Links.Self != "" || r.Links.Related != "" {
+		buf.WriteString(`"links":{`)
+		if r.Links.Self != "" {
+			buf.WriteString(`"self":"`)
+			buf.WriteString(r.Links.Self)
+			buf.WriteByte('"')
+			if r.Links.Related != "" {
+				buf.WriteByte(',')
+			}
+		}
+		if r.Links.Related != "" {
+			buf.WriteString(`"related":"`)
+			buf.WriteString(r.Links.Related)
+			buf.WriteByte('"')
+		}
+		buf.WriteByte('}')
+		if r.Data != nil {
+			buf.WriteByte(',')
+			buf.WriteString(`"data":`)
+			b, err := json.Marshal(r.Data)
+			if err != nil {
+				return []byte{}, err
+			}
+			buf.Write(b)
+		}
+	}
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
 
 type fields struct {
@@ -155,12 +198,6 @@ func (s *typesCache) get(t reflect.Type) *fields {
 				name = keys[1]
 			}
 			f.rels = append(f.rels, field{idx: idx, name: name})
-		case "rellink":
-			name := fd.Name
-			if len(keys) > 1 && validKey(keys[1]) {
-				name = keys[1]
-			}
-			f.rels = append(f.rels, field{idx: idx, name: name, link: true})
 		}
 	}
 	s.m[t] = f

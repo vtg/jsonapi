@@ -39,6 +39,7 @@ type Query struct {
 	Sort    []string
 	Filters Keymaps
 	Queries Keymaps
+	Include string
 }
 
 // DefaultSort set default sort column
@@ -83,6 +84,8 @@ func QueryParams(m map[string][]string) *Query {
 					idx = i + 1
 				}
 			}
+		case "include":
+			p.Include = params[0]
 		case "limit":
 			p.Limit = strToInt(params[0])
 		case "offset":

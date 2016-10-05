@@ -167,18 +167,11 @@ func (e *encoder) marshal(el reflect.Value) error {
 			e.WriteString(f.rels[k].name)
 			e.WriteByte('"')
 			e.WriteByte(':')
-			if f.rels[k].link {
-				e.WriteString(`{"links":`)
-			}
 			b, err := json.Marshal(el.FieldByIndex(f.rels[k].idx).Interface())
 			if err != nil {
 				return err
 			}
 			e.Write(b)
-			if f.rels[k].link {
-				e.WriteByte('}')
-
-			}
 			if k < aLen-1 {
 				e.WriteByte(',')
 			}
