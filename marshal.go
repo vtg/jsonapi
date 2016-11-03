@@ -115,6 +115,9 @@ func (e *encoder) marshal(el reflect.Value) error {
 	if aLen > 0 {
 		e.WriteString(`","attributes":{`)
 		for k := range f.attrs {
+			if f.attrs[k].create {
+				continue
+			}
 			ev := el.FieldByIndex(f.attrs[k].idx)
 			if f.attrs[k].skipEmpty && isEmptyValue(ev) {
 				continue

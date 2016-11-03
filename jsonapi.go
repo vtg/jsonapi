@@ -119,11 +119,12 @@ func (r Relation) MarshalJSON() ([]byte, error) {
 }
 
 type fields struct {
-	id    []int
-	stype string
-	attrs []field
-	links []field
-	rels  []field
+	id     []int
+	idName string
+	stype  string
+	attrs  []field
+	links  []field
+	rels   []field
 }
 
 func (f fields) api() bool {
@@ -131,12 +132,15 @@ func (f fields) api() bool {
 }
 
 type field struct {
-	idx       []int
-	name      string
-	readonly  bool
-	quote     bool
-	link      bool
-	skipEmpty bool
+	idx        []int
+	name       string
+	dbName     string
+	readonly   bool
+	quote      bool
+	link       bool
+	skipEmpty  bool
+	create     bool
+	skipPrefix bool
 }
 
 type typesCache struct {
@@ -164,15 +168,26 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			continue
 		}
 
+		dbName := fd.Tag.Get("column")
+		if dbName == "" {
+			dbName = columnName(fd.Name)
+		}
+
 		keys := strings.Split(tag, ",")
 		switch keys[0] {
 		case "id":
 			f.id = idx
+			f.idName = dbName
 			if len(keys) > 1 {
 				f.stype = keys[1]
 			}
 		case "attr":
-			fld := field{idx: idx, name: fd.Name}
+			fld := field{
+				idx:        idx,
+				name:       fd.Name,
+				dbName:     dbName,
+				skipPrefix: strings.Contains(dbName, ".") || strings.Contains(dbName, "("),
+			}
 			if len(keys) > 1 && validKey(keys[1]) {
 				fld.name = keys[1]
 			}
@@ -185,6 +200,8 @@ func (s *typesCache) get(t reflect.Type) *fields {
 						fld.quote = true
 					case "omitempty":
 						fld.skipEmpty = true
+					case "createonly":
+						fld.create = true
 					}
 				}
 			}
