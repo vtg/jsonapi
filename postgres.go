@@ -7,24 +7,34 @@ import (
 	"unicode"
 )
 
-// PGRelations type to store jsonapi relations
-type PGRelations map[string]interface{}
+// JSONStruct type
+type JSONStruct struct {
+	Attributes map[string]string
+	Relations  map[string]interface{}
+}
 
 // PostgresJSON returns postgres prepared json object
-func PostgresJSON(i interface{}, prefix string, relations PGRelations) (string, error) {
+func PostgresJSON(i interface{}, prefix string, conf JSONStruct) (string, error) {
 	v := interfacePtr(i)
 	if !v.IsValid() {
 		return "", errMarshalInvalidData
 	}
 	c := &encoder{}
-	if err := c.sql(v, prefix, relations); err != nil {
+	if err := c.sql(v, prefix, conf); err != nil {
 		return "", err
 	}
 
 	return c.String(), nil
 }
 
-func (e *encoder) sql(el reflect.Value, prefix string, relations PGRelations) error {
+func (e *encoder) sql(el reflect.Value, prefix string, conf JSONStruct) error {
+	if conf.Attributes == nil {
+		conf.Attributes = make(map[string]string)
+	}
+	if conf.Relations == nil {
+		conf.Relations = make(map[string]interface{})
+	}
+
 	t := el.Type()
 
 	if t.Kind() == reflect.Ptr {
@@ -62,32 +72,42 @@ func (e *encoder) sql(el reflect.Value, prefix string, relations PGRelations) er
 			if f.attrs[k].create {
 				continue
 			}
-			ev := el.FieldByIndex(f.attrs[k].idx)
-			if f.attrs[k].skipEmpty && isEmptyValue(ev) {
-				continue
-			}
+
 			e.WriteByte('\'')
 			e.WriteString(f.attrs[k].name)
 			e.WriteByte('\'')
 			e.WriteByte(',')
-			if !f.attrs[k].skipPrefix {
-				e.WriteString(prefix)
-			}
-			e.WriteString(f.attrs[k].dbName)
-			if f.attrs[k].quote {
-				e.WriteString("::TEXT")
+			if col, ok := conf.Attributes[f.attrs[k].name]; ok {
+				e.WriteString(col)
+				delete(conf.Attributes, f.attrs[k].name)
+			} else {
+				if !f.attrs[k].skipPrefix {
+					e.WriteString(prefix)
+				}
+				e.WriteString(f.attrs[k].dbName)
+				if f.attrs[k].quote {
+					e.WriteString("::TEXT")
+				}
 			}
 			if k < aLen-1 {
 				e.WriteByte(',')
 			}
 		}
+		for k, v := range conf.Attributes {
+			e.WriteByte(',')
+			e.WriteByte('\'')
+			e.WriteString(k)
+			e.WriteByte('\'')
+			e.WriteByte(',')
+			e.WriteString(v)
+		}
 		e.WriteByte(')')
 	}
-	aLen = len(relations)
+	aLen = len(conf.Relations)
 	if aLen > 0 {
 		idx := 0
 		e.WriteString(`,'relationships',json_build_object(`)
-		for k, v := range relations {
+		for k, v := range conf.Relations {
 			el := interfacePtr(v)
 			t := el.Type()
 
@@ -104,7 +124,7 @@ func (e *encoder) sql(el reflect.Value, prefix string, relations PGRelations) er
 				e.WriteByte('\'')
 				e.WriteString(",json_build_object('data',array_to_json(array_agg(")
 				en := encoder{}
-				en.sql(el, k, PGRelations{})
+				en.sql(el, k, JSONStruct{})
 				e.Write(en.Bytes())
 				e.WriteByte(')')
 				e.WriteByte(')')

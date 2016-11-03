@@ -24,7 +24,21 @@ func TestPostgresObject(t *testing.T) {
 		APIAge: 100,
 	}
 	want := `json_build_object('id',t1.id::TEXT,'type','types1','attributes',json_build_object('name',t1.name,'age',t1.api_age::TEXT))`
-	got, err := PostgresJSON(&tp, "t1.", PGRelations{})
+	got, err := PostgresJSON(&tp, "t1.", JSONStruct{})
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestPostgresObjectExtraAttrs(t *testing.T) {
+	tp := testPGType{
+		ID:     100,
+		Name:   "John",
+		APIAge: 100,
+	}
+	want := `json_build_object('id',t1.id::TEXT,'type','types1','attributes',json_build_object('name',t1.name,'age',t1.api_age::TEXT,'extra',col))`
+	got, err := PostgresJSON(&tp, "t1.", JSONStruct{
+		Attributes: map[string]string{"extra": "col"},
+	})
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -36,7 +50,11 @@ func TestPostgresObjectWithRelations(t *testing.T) {
 		APIAge: 100,
 	}
 	want := `json_build_object('id',t1.id::TEXT,'type','types1','attributes',json_build_object('name',t1.name,'age',t1.api_age::TEXT),'relationships',json_build_object('types2',json_build_object('data',array_to_json(array_agg(json_build_object('id',t4.id::TEXT,'type','types2','attributes',json_build_object('name',t4.name)))))))`
-	got, err := PostgresJSON(&tp, "t1.", PGRelations{"t4.": &testPGType2{}})
+	got, err := PostgresJSON(&tp, "t1.", JSONStruct{
+		Relations: map[string]interface{}{
+			"t4.": &testPGType2{},
+		},
+	})
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -48,7 +66,11 @@ func TestPostgresObjectWithRelationLinks(t *testing.T) {
 		APIAge: 100,
 	}
 	want := `json_build_object('id',t1.id::TEXT,'type','types1','attributes',json_build_object('name',t1.name,'age',t1.api_age::TEXT),'relationships',json_build_object('types2',json_build_object('links',json_build_object('related','string/asdf'))))`
-	got, err := PostgresJSON(&tp, "t1.", PGRelations{"types2": "'string/asdf'"})
+	got, err := PostgresJSON(&tp, "t1.", JSONStruct{
+		Relations: map[string]interface{}{
+			"types2": "'string/asdf'",
+		},
+	})
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
