@@ -42,6 +42,21 @@ type Query struct {
 	Include string
 }
 
+// AddFilter adds key/value pair to filter array
+func (q *Query) AddFilter(key, value string) {
+	q.Filters = append(q.Filters, Keymap{key, value})
+}
+
+// AddQuery adds key/value pair to queries array
+func (q *Query) AddQuery(key, value string) {
+	q.Queries = append(q.Queries, Keymap{key, value})
+}
+
+// AddSort adds key/value pair to queries array
+func (q *Query) AddSort(value string) {
+	q.Sort = append(q.Sort, value)
+}
+
 // DefaultSort set default sort column
 func (q *Query) DefaultSort(s string) {
 	if s != "" && len(q.Sort) == 0 {
