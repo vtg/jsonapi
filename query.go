@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Keymaps type
@@ -31,6 +32,11 @@ func (k Keymap) Value() string {
 	return k[1]
 }
 
+// Values returns value
+func (k Keymap) Values() []string {
+	return strings.Split(k[1], ",")
+}
+
 // Query contains parsed url query params
 type Query struct {
 	Limit   int
@@ -40,6 +46,8 @@ type Query struct {
 	Filters Keymaps
 	Queries Keymaps
 	Include string
+	Start   *time.Time
+	End     *time.Time
 }
 
 // AddFilter adds key/value pair to filter array
@@ -91,13 +99,19 @@ func QueryParams(m map[string][]string) *Query {
 					} else {
 						w = params[0][idx:i]
 					}
-					if w[0] == '-' {
-						p.Sort = append(p.Sort, w[1:]+" DESC")
-					} else {
-						p.Sort = append(p.Sort, w)
-					}
+					p.Sort = append(p.Sort, w)
 					idx = i + 1
 				}
+			}
+		case "start":
+			ts, err := time.Parse("1/2/2006", params[0])
+			if err == nil {
+				p.Start = &ts
+			}
+		case "end":
+			ts, err := time.Parse("1/2/2006", params[0])
+			if err == nil {
+				p.End = &ts
 			}
 		case "include":
 			p.Include = params[0]

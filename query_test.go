@@ -29,7 +29,7 @@ func TestURLParams(t *testing.T) {
 	assertEqual(t, "short", p.Format)
 	assertEqual(t, 10, p.Limit)
 	assertEqual(t, 1, p.Offset)
-	assertEqual(t, []string{"name DESC", "id"}, p.Sort)
+	assertEqual(t, []string{"-name", "id"}, p.Sort)
 	assertEqual(t, true, len(p.Filters) == 2)
 	v, _ := p.Filters.Get("active")
 	assertEqual(t, "1", v)
