@@ -39,11 +39,27 @@ type AfterUnmarshaler interface {
 	AfterUnmarshalJSONAPI() error
 }
 
+type withType interface {
+	JSONType() string
+}
+
+type stringer interface {
+	String() string
+}
+
+type withID interface {
+	JSONID() string
+}
+
 var (
 	marshalerType        = reflect.TypeOf(new(Marshaler)).Elem()
 	beforeMarshalerType  = reflect.TypeOf(new(BeforeMarshaler)).Elem()
 	unmarshalerType      = reflect.TypeOf(new(Unmarshaler)).Elem()
 	afterUnmarshalerType = reflect.TypeOf(new(AfterUnmarshaler)).Elem()
+	jsonMarshallerType   = reflect.TypeOf(new(json.Marshaler)).Elem()
+	withTypeType         = reflect.TypeOf(new(withType)).Elem()
+	withIDType           = reflect.TypeOf(new(withID)).Elem()
+	stringerType         = reflect.TypeOf(new(stringer)).Elem()
 )
 
 // MetaData struct
@@ -60,6 +76,59 @@ type Response struct {
 	Included interface{} `json:"included,omitempty"`
 	Meta     *MetaData   `json:"meta,omitempty"`
 	Errors
+}
+
+// MarshalJSON marshaller
+func (r *Response) MarshalJSON() ([]byte, error) {
+	var b bytes.Buffer
+	var data []byte
+	var err error
+	if r.Data != nil {
+		data, err = Marshal(r.Data)
+		if err != nil {
+			return b.Bytes(), err
+		}
+	}
+	b.WriteByte('{')
+	if len(data) > 0 {
+		b.WriteString(`"data":`)
+		b.Write(data)
+	}
+	if r.Included != nil {
+		data, err = Marshal(r.Included)
+		if err != nil {
+			return b.Bytes(), err
+		}
+		if b.Len() > 2 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`"included":`)
+		b.Write(data)
+	}
+	if r.Meta != nil {
+		data, err = json.Marshal(r.Meta)
+		if err != nil {
+			return b.Bytes(), err
+		}
+		if b.Len() > 2 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`"meta":`)
+		b.Write(data)
+	}
+	if r.HasErrors() {
+		data, err = json.Marshal(r.Errors.Errors)
+		if err != nil {
+			return b.Bytes(), err
+		}
+		if b.Len() > 2 {
+			b.WriteByte(',')
+		}
+		b.WriteString(`"errors":`)
+		b.Write(data)
+	}
+	b.WriteByte('}')
+	return b.Bytes(), nil
 }
 
 // StatusCode returns first error status code or success
@@ -119,28 +188,51 @@ func (r Relation) MarshalJSON() ([]byte, error) {
 }
 
 type fields struct {
-	id     []int
-	idName string
-	stype  string
-	attrs  []field
-	links  []field
-	rels   []field
+	id    []int
+	stype string
+	attrs []field
+	links []field
+	rels  []field
 }
 
 func (f fields) api() bool {
-	return len(f.id) > 0
+	return len(f.attrs) > 0
+}
+
+func (f *fields) checkID(el reflect.Value) {
+	if len(f.id) > 0 {
+		return
+	}
+
+	id := "ID"
+
+	t := el.Type()
+
+	if t.Implements(withIDType) {
+		id = el.Interface().(withID).JSONID()
+	}
+
+	if t.Implements(withTypeType) {
+		f.stype = el.Interface().(withType).JSONType()
+	} else {
+		f.stype = stringTransform(t.Name(), "-")
+	}
+
+	if id != "" {
+		if fd, ok := t.FieldByName(id); ok {
+			f.id = fd.Index
+		}
+	}
+
 }
 
 type field struct {
-	idx        []int
-	name       string
-	dbName     string
-	readonly   bool
-	quote      bool
-	link       bool
-	skipEmpty  bool
-	create     bool
-	skipPrefix bool
+	idx       []int
+	name      string
+	readonly  bool
+	quote     bool
+	link      bool
+	skipEmpty bool
 }
 
 type typesCache struct {
@@ -148,8 +240,9 @@ type typesCache struct {
 	m map[reflect.Type]*fields
 }
 
-func (s *typesCache) get(t reflect.Type) *fields {
+func (s *typesCache) get(el reflect.Value) *fields {
 	s.RLock()
+	t := el.Type()
 	f := types.m[t]
 	s.RUnlock()
 
@@ -168,26 +261,15 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			continue
 		}
 
-		dbName := fd.Tag.Get("column")
-		if dbName == "" {
-			dbName = columnName(fd.Name)
-		}
-
 		keys := strings.Split(tag, ",")
 		switch keys[0] {
 		case "id":
 			f.id = idx
-			f.idName = dbName
 			if len(keys) > 1 {
 				f.stype = keys[1]
 			}
 		case "attr":
-			fld := field{
-				idx:        idx,
-				name:       fd.Name,
-				dbName:     dbName,
-				skipPrefix: strings.Contains(dbName, ".") || strings.Contains(dbName, "("),
-			}
+			fld := field{idx: idx, name: fd.Name}
 			if len(keys) > 1 && validKey(keys[1]) {
 				fld.name = keys[1]
 			}
@@ -200,8 +282,6 @@ func (s *typesCache) get(t reflect.Type) *fields {
 						fld.quote = true
 					case "omitempty":
 						fld.skipEmpty = true
-					case "createonly":
-						fld.create = true
 					}
 				}
 			}
@@ -220,6 +300,8 @@ func (s *typesCache) get(t reflect.Type) *fields {
 			f.rels = append(f.rels, field{idx: idx, name: name})
 		}
 	}
+
+	f.checkID(el)
 	s.m[t] = f
 
 	s.Unlock()
@@ -277,4 +359,34 @@ func typeFields(t reflect.Type, idx []int) (res [][]int) {
 		res = append(res, idx1)
 	}
 	return
+}
+
+func stringTransform(s, separator string) string {
+	if s == "" {
+		return ""
+	}
+	var buf bytes.Buffer
+	var idx byte
+	var r rune
+	for i, v := range s {
+		if (i > 1 && idx == 0x1) || (idx == 0x2 && unicode.IsLower(v)) {
+			buf.WriteString(separator)
+		}
+		if i > 0 {
+			buf.WriteRune(r)
+		}
+		if unicode.IsUpper(v) {
+			if idx == 0x0 {
+				idx = 0x1
+			} else {
+				idx = 0x2
+			}
+			r = unicode.ToLower(v)
+		} else {
+			idx = 0x0
+			r = v
+		}
+	}
+	buf.WriteRune(r)
+	return buf.String()
 }

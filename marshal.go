@@ -14,49 +14,69 @@ var (
 
 // Marshal item to json api format
 func Marshal(i interface{}) ([]byte, error) {
-	v := interfacePtr(i)
-	if !v.IsValid() {
-		return []byte{}, errMarshalInvalidData
-	}
-
-	c := &encoder{}
-	if err := c.marshal(v); err != nil {
-		return []byte{}, err
-	}
-
-	return c.Bytes(), nil
-}
-
-// MarshalSlice marshalling items to json api format
-func MarshalSlice(i interface{}) ([]byte, error) {
 	e := interfacePtr(i)
-
 	if !e.IsValid() {
 		return []byte{}, errMarshalInvalidData
 	}
 
+	e1 := e
 	if e.Type().Kind() == reflect.Ptr {
-		e = e.Elem()
-	}
-
-	if e.Type().Kind() != reflect.Slice {
-		return []byte{}, errMarshalInvalidData
+		e1 = e.Elem()
 	}
 
 	c := &encoder{}
-	c.WriteByte('[')
-	iLen := e.Len()
-	for i := 0; i < iLen; i++ {
-		if err := c.marshal(valuePtr(e.Index(i))); err != nil {
+	switch e1.Type().Kind() {
+	case reflect.Slice, reflect.Array:
+		c.WriteByte('[')
+		iLen := e1.Len()
+		for i := 0; i < iLen; i++ {
+			if err := c.marshal(valuePtr(e1.Index(i))); err != nil {
+				return []byte{}, err
+			}
+			if i < iLen-1 {
+				c.WriteByte(',')
+			}
+		}
+		c.WriteByte(']')
+	default:
+		if err := c.marshal(e); err != nil {
 			return []byte{}, err
 		}
-		if i < iLen-1 {
-			c.WriteByte(',')
-		}
 	}
-	c.WriteByte(']')
+
 	return c.Bytes(), nil
 }
+
+// // MarshalSlice marshalling items to json api format
+// func MarshalSlice(i interface{}) ([]byte, error) {
+// 	e := interfacePtr(i)
+//
+// 	if !e.IsValid() {
+// 		return []byte{}, errMarshalInvalidData
+// 	}
+//
+// 	if e.Type().Kind() == reflect.Ptr {
+// 		e = e.Elem()
+// 	}
+//
+// 	if e.Type().Kind() != reflect.Slice {
+// 		return []byte{}, errMarshalInvalidData
+// 	}
+//
+// 	c := &encoder{}
+// 	c.WriteByte('[')
+// 	iLen := e.Len()
+// 	for i := 0; i < iLen; i++ {
+// 		if err := c.marshal(valuePtr(e.Index(i))); err != nil {
+// 			return []byte{}, err
+// 		}
+// 		if i < iLen-1 {
+// 			c.WriteByte(',')
+// 		}
+// 	}
+// 	c.WriteByte(']')
+// 	return c.Bytes(), nil
+// }
 
 type encoder struct {
 	bytes.Buffer
@@ -90,7 +110,7 @@ func (e *encoder) marshal(el reflect.Value) error {
 		return errMarshalInvalidData
 	}
 
-	f := types.get(t)
+	f := types.get(el)
 	if !f.api() {
 		b, err := json.Marshal(el.Interface())
 		e.Write(b)
@@ -98,29 +118,37 @@ func (e *encoder) marshal(el reflect.Value) error {
 	}
 
 	e.WriteByte('{')
-	e.WriteString(`"id":"`)
+	e.WriteString(`"id":`)
 
 	id := el.FieldByIndex(f.id)
-	switch id.Kind() {
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		e.Write(strconv.AppendUint(e.buffer[:0], id.Uint(), 10))
-	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-		e.Write(strconv.AppendInt(e.buffer[:0], id.Int(), 10))
-	case reflect.String:
-		e.WriteString(id.String())
+	if id.Type().Implements(jsonMarshallerType) {
+		m := id.Interface().(json.Marshaler)
+		b, _ := m.MarshalJSON()
+		e.Write(b)
+	} else {
+		e.WriteByte('"')
+		switch id.Kind() {
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			e.Write(strconv.AppendUint(e.buffer[:0], id.Uint(), 10))
+		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+			e.Write(strconv.AppendInt(e.buffer[:0], id.Int(), 10))
+		case reflect.String:
+			e.WriteString(id.String())
+		}
+		e.WriteByte('"')
 	}
-	e.WriteString(`","type":"`)
+	e.WriteString(`,"type":"`)
 	e.WriteString(f.stype)
-	aLen := len(f.attrs)
-	if aLen > 0 {
+	if len(f.attrs) > 0 {
+		empty := true
 		e.WriteString(`","attributes":{`)
 		for k := range f.attrs {
-			if f.attrs[k].create {
-				continue
-			}
 			ev := el.FieldByIndex(f.attrs[k].idx)
 			if f.attrs[k].skipEmpty && isEmptyValue(ev) {
 				continue
+			}
+			if !empty {
+				e.WriteByte(',')
 			}
 			e.WriteByte('"')
 			e.WriteString(f.attrs[k].name)
@@ -137,16 +165,16 @@ func (e *encoder) marshal(el reflect.Value) error {
 			if f.attrs[k].quote {
 				e.WriteByte('"')
 			}
-			if k < aLen-1 {
-				e.WriteByte(',')
-			}
+			empty = false
 		}
 		e.WriteByte('}')
 	}
-	aLen = len(f.links)
-	if aLen > 0 {
+	if len(f.links) > 0 {
 		e.WriteString(`,"links":{`)
 		for k := range f.links {
+			if k > 0 {
+				e.WriteByte(',')
+			}
 			e.WriteByte('"')
 			e.WriteString(f.links[k].name)
 			e.WriteByte('"')
@@ -156,16 +184,15 @@ func (e *encoder) marshal(el reflect.Value) error {
 				return err
 			}
 			e.Write(b)
-			if k < aLen-1 {
-				e.WriteByte(',')
-			}
 		}
 		e.WriteByte('}')
 	}
-	aLen = len(f.rels)
-	if aLen > 0 {
+	if len(f.rels) > 0 {
 		e.WriteString(`,"relationships":{`)
 		for k := range f.rels {
+			if k > 0 {
+				e.WriteByte(',')
+			}
 			e.WriteByte('"')
 			e.WriteString(f.rels[k].name)
 			e.WriteByte('"')
@@ -175,9 +202,6 @@ func (e *encoder) marshal(el reflect.Value) error {
 				return err
 			}
 			e.Write(b)
-			if k < aLen-1 {
-				e.WriteByte(',')
-			}
 		}
 		e.WriteByte('}')
 	}

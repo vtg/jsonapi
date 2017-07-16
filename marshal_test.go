@@ -107,20 +107,6 @@ func TestMarshalRelations(t *testing.T) {
 	assertEqual(t, want, string(res))
 }
 
-func TestMarshalerSlice(t *testing.T) {
-	s := testStructBeforeMarshaler{ID: 100}
-	s1 := testStructBeforeMarshaler{ID: 101}
-
-	r := []testStructBeforeMarshaler{s, s1}
-
-	want := `{"id":"100","type":"test-structs","attributes":{"name":"changed"}}`
-	want1 := `{"id":"101","type":"test-structs","attributes":{"name":"changed"}}`
-	want = "[" + want + "," + want1 + "]"
-	res, err := MarshalSlice(&r)
-	assertNil(t, err)
-	assertEqual(t, want, string(res))
-}
-
 func TestMarshal(t *testing.T) {
 	s := testStruct{
 		ID:       100,
@@ -179,40 +165,6 @@ func TestMarshalNonAPI(t *testing.T) {
 
 func TestMarshalError(t *testing.T) {
 	_, err := Marshal(nil)
-	assertEqual(t, errMarshalInvalidData, err)
-}
-
-func TestMarshalSlice(t *testing.T) {
-	s := testStruct{
-		ID:       100,
-		Name:     "John",
-		Address:  testSub{Country: "CTR", City: "DT"},
-		Excluded: "dont include this",
-	}
-	s1 := testStruct{
-		ID:       101,
-		Name:     "John1",
-		Address:  testSub{Country: "CTR1", City: "DT1"},
-		Excluded: "dont include this",
-	}
-
-	r := []testStruct{s, s1}
-	want := `{"id":"100","type":"test-structs","attributes":{"name":"John","address-at":{"country":"CTR","city":"DT"},"intstring":"0"}}`
-	want1 := `{"id":"101","type":"test-structs","attributes":{"name":"John1","address-at":{"country":"CTR1","city":"DT1"},"intstring":"0"}}`
-
-	want = "[" + want + "," + want1 + "]"
-
-	res, err := MarshalSlice(r)
-	assertNil(t, err)
-	assertEqual(t, want, string(res))
-}
-
-func TestMarshalSliceError(t *testing.T) {
-	_, err := MarshalSlice(nil)
-	assertEqual(t, errMarshalInvalidData, err)
-	_, err = MarshalSlice("asd")
-	assertEqual(t, errMarshalInvalidData, err)
-	_, err = MarshalSlice([]string{"asd"})
 	assertEqual(t, errMarshalInvalidData, err)
 }
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 // Request structure for unmarshaling
@@ -28,10 +27,10 @@ func (c Change) equal() bool {
 	return c.Cur == c.New
 }
 
-// String method
-func (c Change) String() string {
-	return c.Field + ": " + c.Cur + " -> " + c.New
-}
+// // String method
+// func (c Change) String() string {
+// 	return c.Field + ": " + c.Cur + " -> " + c.New
+// }
 
 // Unmarshal decoding json api compatible request
 func Unmarshal(b []byte, i interface{}) error {
@@ -74,14 +73,26 @@ func (c Changes) Find(k string) Change {
 	return Change{}
 }
 
-// String method
-func (c Changes) String() string {
-	strs := make([]string, 0, len(c))
-	for i := range c {
-		strs = append(strs, c[i].String())
+// Contains returns true if changes have field
+func (c Changes) Contains(keys ...string) bool {
+	for _, k := range keys {
+		for i := range c {
+			if c[i].Field == k {
+				return true
+			}
+		}
 	}
-	return strings.Join(strs, "\n")
+	return false
 }
+
+// // String method
+// func (c Changes) String() string {
+// 	strs := make([]string, 0, len(c))
+// 	for i := range c {
+// 		strs = append(strs, c[i].String())
+// 	}
+// 	return strings.Join(strs, "\n")
+// }
 
 type decoder struct {
 	withChanges bool
@@ -107,7 +118,7 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 		return errMarshalInvalidData
 	}
 
-	f := types.get(t1)
+	f := types.get(e1)
 	if !f.api() {
 		return fmt.Errorf("jsonapi: %v incompatible with json api", t1.Name())
 	}
@@ -197,29 +208,41 @@ func (d *decoder) diff(v1, v2 reflect.Value, field string) bool {
 	switch v1.Type().Kind() {
 	case reflect.Map:
 		keys := mapKeys{}
-		for _, v := range v1.MapKeys() {
-			keys.add(v)
-		}
-		for _, v := range v2.MapKeys() {
-			keys.add(v)
+		if v1.Kind() == v2.Kind() {
+			for _, v := range v1.MapKeys() {
+				keys.add(v)
+			}
+			for _, v := range v2.MapKeys() {
+				keys.add(v)
+			}
 		}
 		for _, key := range keys.keys {
 			d.diff(v1.MapIndex(key), v2.MapIndex(key), change.Field+"."+key.String())
 		}
 	case reflect.Struct:
-		t := v1.Type()
-		for i := 0; i < t.NumField(); i++ {
-			fd := t.Field(i)
+		if v1.Type().Name() == "Time" {
+			change.Cur = stringVal(v1)
+			change.New = stringVal(v2)
+		} else {
+			t := v1.Type()
+			for i := 0; i < t.NumField(); i++ {
+				fd := t.Field(i)
+				// skip ignored fields
+				if tag := fd.Tag.Get("bson"); tag == "-" {
+					continue
+				}
 
-			if (fd.PkgPath != "" && !fd.Anonymous) || v1.Kind() != v2.Kind() {
-				continue
+				if (fd.PkgPath != "" && !fd.Anonymous) || v1.Kind() != v2.Kind() {
+					continue
+				}
+				d.diff(v1.FieldByIndex(fd.Index), v2.FieldByIndex(fd.Index), change.Field+"."+fd.Name)
 			}
-			d.diff(v1.FieldByIndex(fd.Index), v2.FieldByIndex(fd.Index), change.Field+"."+fd.Name)
 		}
 	default:
 		change.Cur = stringVal(v1)
 		change.New = stringVal(v2)
 	}
+
 	if !change.equal() {
 		d.changes = append(d.changes, change)
 	}
@@ -240,6 +263,10 @@ func getElement(v reflect.Value) reflect.Value {
 }
 
 func stringVal(v reflect.Value) string {
+	if v.Type().Implements(stringerType) {
+		return v.Interface().(stringer).String()
+	}
+
 	switch v.Type().Kind() {
 	case reflect.String:
 		return v.String()
