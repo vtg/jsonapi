@@ -122,6 +122,42 @@ func TestMarshal(t *testing.T) {
 	assertEqual(t, want, string(res))
 }
 
+func TestMarshalWithScope(t *testing.T) {
+	s := struct {
+		ID   uint64 `jsonapi:"id,test-structs"`
+		S1   string `jsonapi:"attr,s1"`
+		S2   string `jsonapi:"attr,s2" scope:"2"`
+		S3   string `jsonapi:"attr,s3" scope:"3"`
+		Both string `jsonapi:"attr,both" scope:"2,3"`
+	}{
+		ID:   100,
+		S1:   "v1",
+		S2:   "v2",
+		S3:   "v3",
+		Both: "v4",
+	}
+
+	want := `{"id":"100","type":"test-structs","attributes":{"s1":"v1","s2":"v2","s3":"v3","both":"v4"}}`
+	res, err := MarshalWithScope(&s, "")
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+
+	want = `{"id":"100","type":"test-structs","attributes":{"s1":"v1","s2":"v2","both":"v4"}}`
+	res, err = MarshalWithScope(&s, "2")
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+
+	want = `{"id":"100","type":"test-structs","attributes":{"s1":"v1","s3":"v3","both":"v4"}}`
+	res, err = MarshalWithScope(&s, "3")
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+
+	want = `{"id":"100","type":"test-structs","attributes":{"s1":"v1"}}`
+	res, err = MarshalWithScope(&s, "4")
+	assertNil(t, err)
+	assertEqual(t, want, string(res))
+}
+
 func TestMarshalOmit(t *testing.T) {
 	s := testStructOmit{
 		ID: 100,

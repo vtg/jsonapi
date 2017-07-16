@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func assertEqual(t *testing.T, expect interface{}, v interface{}, descr ...string) {
@@ -153,6 +155,46 @@ func TestUnmarshalWithChanges(t *testing.T) {
 	assertEqual(t, Change{Field: "slice", Cur: "[1 2 3]", New: "[1 2 3 4]"}, changes.Find("slice"))
 	assertEqual(t, Change{Field: "sub.City", Cur: "DT", New: "DT1"}, changes.Find("sub.City"))
 	assertEqual(t, 7, len(changes))
+}
+
+type scopeTest struct {
+	ID   uint64 `jsonapi:"id,test-structs"`
+	S1   string `jsonapi:"attr,s1"`
+	S2   string `jsonapi:"attr,s2" scope:"2"`
+	S3   string `jsonapi:"attr,s3" scope:"3"`
+	Both string `jsonapi:"attr,both" scope:"2,3"`
+}
+
+func TestUnmarshalWithScope(t *testing.T) {
+	b := []byte(`{"data":{"id":"100","type":"test-structs","attributes":{"s1":"c1","s2":"c2","s3":"c3","both":"c4"}}}`)
+
+	s := scopeTest{ID: 100, S1: "v1", S2: "v2", S3: "v3", Both: "v4"}
+	assert.NoError(t, UnmarshalWithScope(b, &s, ""))
+	assert.Equal(t, "c1", s.S1)
+	assert.Equal(t, "c2", s.S2)
+	assert.Equal(t, "c3", s.S3)
+	assert.Equal(t, "c4", s.Both)
+
+	s = scopeTest{ID: 100, S1: "v1", S2: "v2", S3: "v3", Both: "v4"}
+	assert.NoError(t, UnmarshalWithScope(b, &s, "2"))
+	assert.Equal(t, "c1", s.S1)
+	assert.Equal(t, "c2", s.S2)
+	assert.Equal(t, "v3", s.S3)
+	assert.Equal(t, "c4", s.Both)
+
+	s = scopeTest{ID: 100, S1: "v1", S2: "v2", S3: "v3", Both: "v4"}
+	assert.NoError(t, UnmarshalWithScope(b, &s, "3"))
+	assert.Equal(t, "c1", s.S1)
+	assert.Equal(t, "v2", s.S2)
+	assert.Equal(t, "c3", s.S3)
+	assert.Equal(t, "c4", s.Both)
+
+	s = scopeTest{ID: 100, S1: "v1", S2: "v2", S3: "v3", Both: "v4"}
+	assert.NoError(t, UnmarshalWithScope(b, &s, "4"))
+	assert.Equal(t, "c1", s.S1)
+	assert.Equal(t, "v2", s.S2)
+	assert.Equal(t, "v3", s.S3)
+	assert.Equal(t, "v4", s.Both)
 }
 
 func BenchmarkUnmarshalPlain(b *testing.B) {

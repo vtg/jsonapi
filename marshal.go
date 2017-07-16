@@ -12,8 +12,18 @@ var (
 	errMarshalInvalidData = errors.New("jsonapi: invalid data structure passed for marshalling")
 )
 
+// MarshalWithScope item to json api format
+func MarshalWithScope(i interface{}, scope string) ([]byte, error) {
+	return marshalWithScope(i, scope)
+}
+
 // Marshal item to json api format
 func Marshal(i interface{}) ([]byte, error) {
+	return marshalWithScope(i, "")
+}
+
+// Marshal item to json api format
+func marshalWithScope(i interface{}, scope string) ([]byte, error) {
 	e := interfacePtr(i)
 	if !e.IsValid() {
 		return []byte{}, errMarshalInvalidData
@@ -30,7 +40,7 @@ func Marshal(i interface{}) ([]byte, error) {
 		c.WriteByte('[')
 		iLen := e1.Len()
 		for i := 0; i < iLen; i++ {
-			if err := c.marshal(valuePtr(e1.Index(i))); err != nil {
+			if err := c.marshal(valuePtr(e1.Index(i)), scope); err != nil {
 				return []byte{}, err
 			}
 			if i < iLen-1 {
@@ -39,7 +49,7 @@ func Marshal(i interface{}) ([]byte, error) {
 		}
 		c.WriteByte(']')
 	default:
-		if err := c.marshal(e); err != nil {
+		if err := c.marshal(e, scope); err != nil {
 			return []byte{}, err
 		}
 	}
@@ -47,43 +57,12 @@ func Marshal(i interface{}) ([]byte, error) {
 	return c.Bytes(), nil
 }
 
-// // MarshalSlice marshalling items to json api format
-// func MarshalSlice(i interface{}) ([]byte, error) {
-// 	e := interfacePtr(i)
-//
-// 	if !e.IsValid() {
-// 		return []byte{}, errMarshalInvalidData
-// 	}
-//
-// 	if e.Type().Kind() == reflect.Ptr {
-// 		e = e.Elem()
-// 	}
-//
-// 	if e.Type().Kind() != reflect.Slice {
-// 		return []byte{}, errMarshalInvalidData
-// 	}
-//
-// 	c := &encoder{}
-// 	c.WriteByte('[')
-// 	iLen := e.Len()
-// 	for i := 0; i < iLen; i++ {
-// 		if err := c.marshal(valuePtr(e.Index(i))); err != nil {
-// 			return []byte{}, err
-// 		}
-// 		if i < iLen-1 {
-// 			c.WriteByte(',')
-// 		}
-// 	}
-// 	c.WriteByte(']')
-// 	return c.Bytes(), nil
-// }
-
 type encoder struct {
 	bytes.Buffer
 	buffer [64]byte
 }
 
-func (e *encoder) marshal(el reflect.Value) error {
+func (e *encoder) marshal(el reflect.Value, scope string) error {
 	t := el.Type()
 	if t.Implements(beforeMarshalerType) {
 		m := el.Interface().(BeforeMarshaler)
@@ -145,6 +124,9 @@ func (e *encoder) marshal(el reflect.Value) error {
 		for k := range f.attrs {
 			ev := el.FieldByIndex(f.attrs[k].idx)
 			if f.attrs[k].skipEmpty && isEmptyValue(ev) {
+				continue
+			}
+			if !f.attrs[k].inScope(scope) {
 				continue
 			}
 			if !empty {

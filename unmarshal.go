@@ -32,26 +32,46 @@ func (c Change) equal() bool {
 // 	return c.Field + ": " + c.Cur + " -> " + c.New
 // }
 
+// UnmarshalWithScope decoding json api compatible request
+func UnmarshalWithScope(b []byte, i interface{}, scope string) error {
+	return unmarshal(b, i, scope)
+}
+
 // Unmarshal decoding json api compatible request
 func Unmarshal(b []byte, i interface{}) error {
+	return unmarshal(b, i, "")
+}
+
+// unmarshal decoding json api compatible request
+func unmarshal(b []byte, i interface{}, scope string) error {
 	v := interfacePtr(i)
 	if !v.IsValid() {
 		return errMarshalInvalidData
 	}
 
 	d := decoder{}
-	return d.unmarshal(b, v)
+	return d.unmarshal(b, v, scope)
+}
+
+// UnmarshalWithChangesWithScope decoding json api compatible request into structure
+// and returning changes
+func UnmarshalWithChangesWithScope(b []byte, i interface{}, scope string) (Changes, error) {
+	return unmarshalWithChanges(b, i, scope)
 }
 
 // UnmarshalWithChanges decoding json api compatible request into structure
 // and returning changes
 func UnmarshalWithChanges(b []byte, i interface{}) (Changes, error) {
+	return unmarshalWithChanges(b, i, "")
+}
+
+func unmarshalWithChanges(b []byte, i interface{}, scope string) (Changes, error) {
 	v := interfacePtr(i)
 	if !v.IsValid() {
 		return Changes{}, errMarshalInvalidData
 	}
 	d := decoder{withChanges: true}
-	err := d.unmarshal(b, v)
+	err := d.unmarshal(b, v, scope)
 	return d.changes, err
 }
 
@@ -100,7 +120,7 @@ type decoder struct {
 }
 
 // Unmarshal decoding json api compatible request
-func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
+func (d *decoder) unmarshal(b []byte, e reflect.Value, scope string) error {
 	t := e.Type()
 
 	if t.Implements(unmarshalerType) {
@@ -143,6 +163,10 @@ func (d *decoder) unmarshal(b []byte, e reflect.Value) error {
 		if !attr.readonly {
 			v, ok := req.Data.Attributes[attr.name]
 			if !ok {
+				continue
+			}
+
+			if !attr.inScope(scope) {
 				continue
 			}
 

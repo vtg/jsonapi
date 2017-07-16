@@ -75,6 +75,7 @@ type Response struct {
 	Data     interface{} `json:"data,omitempty"`
 	Included interface{} `json:"included,omitempty"`
 	Meta     *MetaData   `json:"meta,omitempty"`
+	Scope    string      `json:"-"`
 	Errors
 }
 
@@ -84,7 +85,7 @@ func (r *Response) MarshalJSON() ([]byte, error) {
 	var data []byte
 	var err error
 	if r.Data != nil {
-		data, err = Marshal(r.Data)
+		data, err = MarshalWithScope(r.Data, r.Scope)
 		if err != nil {
 			return b.Bytes(), err
 		}
@@ -95,7 +96,7 @@ func (r *Response) MarshalJSON() ([]byte, error) {
 		b.Write(data)
 	}
 	if r.Included != nil {
-		data, err = Marshal(r.Included)
+		data, err = MarshalWithScope(r.Included, r.Scope)
 		if err != nil {
 			return b.Bytes(), err
 		}
@@ -229,10 +230,23 @@ func (f *fields) checkID(el reflect.Value) {
 type field struct {
 	idx       []int
 	name      string
+	scopes    []string
 	readonly  bool
 	quote     bool
 	link      bool
 	skipEmpty bool
+}
+
+func (f field) inScope(s string) bool {
+	if len(f.scopes) == 0 || s == "" {
+		return true
+	}
+	for _, v := range f.scopes {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 type typesCache struct {
@@ -284,6 +298,9 @@ func (s *typesCache) get(el reflect.Value) *fields {
 						fld.skipEmpty = true
 					}
 				}
+			}
+			if scope := fd.Tag.Get("scope"); scope != "" {
+				fld.scopes = strings.Split(scope, ",")
 			}
 			f.attrs = append(f.attrs, fld)
 		case "link":
